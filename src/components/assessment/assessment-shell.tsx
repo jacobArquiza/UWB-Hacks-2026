@@ -15,16 +15,14 @@ import { RiskDetailDialog } from "@/components/assessment/risk-detail-dialog";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
-import {
-  Card,
-  CardContent,
-  CardHeader,
-} from "@/components/ui/card";
-import { Separator } from "@/components/ui/separator";
-import { formatCompactNumber, formatTimestamp } from "@/lib/format";
-import { getRiskColor, getRiskLabel, getRiskTint } from "@/lib/risk";
+import { formatTimestamp } from "@/lib/format";
+import { getRiskColor, getRiskLabel } from "@/lib/risk";
 import { upsertSavedChild } from "@/lib/saved-children";
-import type { FriendRiskSummary, GameRiskSummary, UserAssessment } from "@/lib/types";
+import type {
+  FriendRiskSummary,
+  GameRiskSummary,
+  UserAssessment,
+} from "@/lib/types";
 
 type AssessmentShellProps = {
   initialAssessment: UserAssessment;
@@ -40,33 +38,33 @@ type DialogSelection =
 
 function SectionHeader({
   title,
-  subtitle,
   lastAssessed,
   refreshing,
   onRefresh,
 }: {
   title: string;
-  subtitle: string;
   lastAssessed: string;
   refreshing: boolean;
   onRefresh: () => void;
 }) {
   return (
-    <div className="flex flex-col gap-4 sm:flex-row sm:items-start sm:justify-between">
-      <div>
-        <h2 className="font-heading text-2xl text-white">{title}</h2>
-        <p className="mt-1 text-sm leading-6 text-white/58">{subtitle}</p>
-      </div>
-      <div className="flex items-center gap-2 self-start">
-        <span className="text-xs tracking-[0.22em] text-white/42 uppercase">
+    <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
+      <h2 className="font-heading text-[1.95rem] leading-none font-semibold tracking-[-0.04em] text-foreground sm:text-[2.15rem]">
+        {title}
+      </h2>
+      <div className="flex flex-wrap items-center gap-3">
+        <Badge
+          variant="outline"
+          className="h-8 rounded-full border-border bg-foreground/[0.03] px-3.5 text-[0.68rem] tracking-[0.18em] text-muted-foreground uppercase"
+        >
           Last assessed {formatTimestamp(lastAssessed)}
-        </span>
+        </Badge>
         <Button
           type="button"
           variant="outline"
-          size="sm"
+          size="lg"
           onClick={onRefresh}
-          className="border-white/10 bg-white/[0.02] text-white hover:bg-white/[0.06]"
+          className="h-10 rounded-full border-border bg-foreground/[0.03] px-4 text-[0.77rem] tracking-[0.16em] text-foreground uppercase hover:bg-foreground/[0.06]"
         >
           <RefreshCw className={refreshing ? "size-3.5 animate-spin" : "size-3.5"} />
           Refresh
@@ -79,40 +77,41 @@ function SectionHeader({
 function FriendChip({
   friend,
   onSelect,
+  index,
 }: {
   friend: FriendRiskSummary;
   onSelect: (friend: FriendRiskSummary) => void;
+  index: number;
 }) {
+  const color = getRiskColor(friend.score);
+
   return (
     <button
       type="button"
       onClick={() => onSelect(friend)}
-      className="flex w-full items-center gap-4 rounded-[1.4rem] border border-white/8 bg-white/[0.03] px-4 py-4 text-left transition hover:opacity-72"
+      className="motion-safe:animate-in motion-safe:fade-in-0 motion-safe:zoom-in-95 motion-safe:slide-in-from-bottom-3 motion-safe:duration-500 motion-safe:ease-out group w-[8.75rem] text-left transition-transform duration-300 ease-out hover:-translate-y-1 hover:scale-[1.01]"
       style={{
-        borderColor: `${getRiskColor(friend.score)}88`,
-        boxShadow: `inset 0 0 0 1px ${getRiskTint(friend.score)}`,
+        animationDelay: `${120 + index * 55}ms`,
+        animationFillMode: "both",
       }}
     >
-      <Avatar
-        size="lg"
-        className="size-14 border"
-        style={{ borderColor: getRiskColor(friend.score) }}
+      <div
+        className="flex aspect-square items-center justify-center rounded-full border-[4px] bg-foreground/[0.05] transition-all duration-300 ease-out group-hover:opacity-88"
+        style={{ borderColor: color }}
       >
-        <AvatarImage src={friend.avatarUrl} alt={friend.displayName} />
-        <AvatarFallback>{friend.displayName.slice(0, 1)}</AvatarFallback>
-      </Avatar>
-      <div className="min-w-0 flex-1">
-        <p className="truncate font-medium text-white">{friend.displayName}</p>
-        <p className="truncate text-sm text-white/52">@{friend.name}</p>
+        <Avatar className="size-[6.9rem] rounded-full bg-foreground/[0.06] ring-1 ring-border">
+          <AvatarImage src={friend.avatarUrl} alt={friend.displayName} />
+          <AvatarFallback>{friend.displayName.slice(0, 1)}</AvatarFallback>
+        </Avatar>
       </div>
-      <div className="text-right">
-        <p
-          className="text-sm font-semibold"
-          style={{ color: getRiskColor(friend.score) }}
-        >
-          {friend.score}%
+      <div className="mt-3 space-y-0.5">
+        <p className="truncate text-[1rem] font-semibold text-foreground">
+          {friend.displayName}
         </p>
-        <p className="text-xs text-white/42">{getRiskLabel(friend.level)}</p>
+        <p className="truncate text-[0.92rem] text-muted-foreground">@{friend.name}</p>
+        <p className="text-[0.92rem] font-medium" style={{ color }}>
+          Suspicion: {friend.score}%
+        </p>
       </div>
     </button>
   );
@@ -121,47 +120,73 @@ function FriendChip({
 function GameCard({
   game,
   onSelect,
+  index,
 }: {
   game: GameRiskSummary;
   onSelect: (game: GameRiskSummary) => void;
+  index: number;
 }) {
+  const color = getRiskColor(game.score);
+
   return (
     <button
       type="button"
       onClick={() => onSelect(game)}
-      className="overflow-hidden rounded-[1.5rem] border bg-white/[0.03] text-left transition hover:opacity-72"
+      className="motion-safe:animate-in motion-safe:fade-in-0 motion-safe:zoom-in-95 motion-safe:slide-in-from-bottom-3 motion-safe:duration-500 motion-safe:ease-out w-full max-w-[15.25rem] text-left transition-transform duration-300 ease-out hover:-translate-y-1 hover:scale-[1.01]"
       style={{
-        borderColor: `${getRiskColor(game.score)}88`,
-        boxShadow: `inset 0 0 0 1px ${getRiskTint(game.score)}`,
+        animationDelay: `${180 + index * 70}ms`,
+        animationFillMode: "both",
       }}
     >
-      <div className="aspect-square overflow-hidden bg-black/20">
-        <Image
-          src={game.thumbnailUrl}
-          alt={game.name}
-          width={560}
-          height={560}
-          className="h-full w-full object-cover"
-        />
-      </div>
-      <div className="space-y-2 p-4">
-        <div className="flex items-start justify-between gap-3">
-          <div>
-            <p className="font-medium text-white">{game.name}</p>
-            <p className="text-sm text-white/52">{game.creatorName}</p>
-          </div>
-          <div
-            className="rounded-full px-2.5 py-1 text-xs font-semibold"
-            style={{
-              background: getRiskTint(game.score),
-              color: getRiskColor(game.score),
-            }}
-          >
-            {game.score}%
-          </div>
+      <div className="space-y-4">
+        <div
+          className="aspect-square overflow-hidden rounded-[1.2rem] border-[4px] bg-foreground/[0.04] transition-transform duration-300 ease-out"
+          style={{ borderColor: color }}
+        >
+          <Image
+            src={game.thumbnailUrl}
+            alt={game.name}
+            width={560}
+            height={560}
+            className="h-full w-full object-cover"
+          />
+        </div>
+        <div className="space-y-1.5 px-1">
+          <p className="line-clamp-1 text-[1.02rem] font-semibold text-foreground">
+            {game.name}
+          </p>
+          <p className="line-clamp-2 text-sm leading-6 text-muted-foreground">
+            Created by{" "}
+            <span className="font-medium text-foreground/80">{game.creatorName}</span>
+          </p>
+          <p className="text-sm font-medium" style={{ color }}>
+            Suspicion: {game.score}%
+          </p>
         </div>
       </div>
     </button>
+  );
+}
+
+function NotesBlock({ summary, notes }: { summary: string; notes: string[] }) {
+  return (
+    <div
+      className="motion-safe:animate-in motion-safe:fade-in-0 motion-safe:slide-in-from-bottom-2 motion-safe:duration-700 motion-safe:ease-out mt-6 max-w-[40rem] space-y-4"
+      style={{ animationDelay: "220ms", animationFillMode: "both" }}
+    >
+      <p className="text-sm leading-7 text-muted-foreground">{summary}</p>
+      <div className="grid gap-2.5">
+        {notes.map((note) => (
+          <div
+            key={note}
+            className="flex items-start gap-3 text-sm leading-6 text-muted-foreground"
+          >
+            <ShieldAlert className="mt-1 size-4 shrink-0 text-muted-foreground/70" />
+            <span>{note}</span>
+          </div>
+        ))}
+      </div>
+    </div>
   );
 }
 
@@ -238,7 +263,13 @@ export function AssessmentShell({
       );
 
       if (!response.ok) {
-        throw new Error("Could not stage this child for the dashboard.");
+        const payload = (await response.json().catch(() => null)) as
+          | { error?: string }
+          | null;
+
+        throw new Error(
+          payload?.error ?? "Could not stage this child for the dashboard.",
+        );
       }
 
       const payload = (await response.json()) as {
@@ -271,166 +302,130 @@ export function AssessmentShell({
 
   return (
     <>
-      <div className="shell flex flex-1 flex-col gap-6 py-8 sm:py-10">
-        <Card className="overflow-hidden rounded-[2rem] border border-white/10 bg-[#141518] py-0">
-          <div className="grid gap-8 p-6 lg:grid-cols-[1.3fr_0.7fr]">
-            <div>
-              <Badge
-                variant="outline"
-                className="border-white/10 bg-white/[0.03] text-white/62"
-              >
-                Phase 0 preview
-              </Badge>
-              <div className="mt-5 flex flex-col gap-6 sm:flex-row sm:items-center">
-                <a
-                  href={assessment.profile.profileUrl}
-                  target="_blank"
-                  rel="noreferrer"
-                  className="flex items-center gap-4 transition hover:opacity-75"
-                >
-                  <Avatar size="lg" className="size-[4.5rem] rounded-[1.6rem]">
-                    <AvatarImage
-                      src={assessment.profile.avatarUrl}
-                      alt={assessment.profile.displayName}
-                    />
-                    <AvatarFallback>
-                      {assessment.profile.displayName.slice(0, 1)}
-                    </AvatarFallback>
-                  </Avatar>
-                  <div>
-                    <p className="font-heading text-4xl text-white">
-                      {assessment.profile.displayName}
-                    </p>
-                    <p className="mt-2 flex items-center gap-2 text-base text-white/56">
-                      @{assessment.profile.name}
-                      <ExternalLink className="size-4" />
-                    </p>
-                  </div>
-                </a>
-
-                <div className="flex flex-wrap gap-2 sm:ml-auto">
-                  <Button
-                    type="button"
-                    variant="outline"
-                    onClick={() => refreshAssessment("profile")}
-                    className="border-white/10 bg-white/[0.02] text-white hover:bg-white/[0.06]"
-                  >
-                    <RefreshCw
-                      className={
-                        refreshScope === "profile"
-                          ? "size-4 animate-spin"
-                          : "size-4"
-                      }
-                    />
-                    Refresh
-                  </Button>
-                  <Button
-                    type="button"
-                    onClick={saveChild}
-                    disabled={isSaving}
-                    className="bg-white text-black hover:bg-white/85"
-                  >
-                    <UserRoundPlus className="size-4" />
-                    {isSaving ? "Saving" : "Save as Child"}
-                  </Button>
-                </div>
-              </div>
-
-              <p className="mt-6 max-w-3xl text-sm leading-7 text-white/62">
-                {assessment.summary}
-              </p>
-
-              <div className="mt-6 grid gap-3 sm:grid-cols-3">
-                <div className="rounded-[1.25rem] border border-white/8 bg-white/[0.03] p-4">
-                  <p className="text-xs tracking-[0.22em] text-white/42 uppercase">
-                    Last assessed
-                  </p>
-                  <p className="mt-2 text-sm text-white/76">
-                    {formatTimestamp(assessment.lastAssessed)}
-                  </p>
-                </div>
-                <div className="rounded-[1.25rem] border border-white/8 bg-white/[0.03] p-4">
-                  <p className="text-xs tracking-[0.22em] text-white/42 uppercase">
-                    Friend count
-                  </p>
-                  <p className="mt-2 text-sm text-white/76">
-                    {formatCompactNumber(assessment.profile.friendCount)}
-                  </p>
-                </div>
-                <div className="rounded-[1.25rem] border border-white/8 bg-white/[0.03] p-4">
-                  <p className="text-xs tracking-[0.22em] text-white/42 uppercase">
-                    Account age
-                  </p>
-                  <p className="mt-2 text-sm text-white/76">
-                    {assessment.profile.accountAgeDays} days
-                  </p>
-                </div>
-              </div>
-            </div>
-
-            <div className="rounded-[1.7rem] border border-white/8 bg-white/[0.03] p-5">
-              <div className="flex items-center justify-between gap-3">
-                <div>
-                  <p className="text-xs tracking-[0.22em] text-white/42 uppercase">
-                    Overall preview signal
-                  </p>
-                  <p className="mt-2 font-heading text-4xl text-white">
-                    {assessment.overallRiskScore}%
-                  </p>
-                </div>
-                <div
-                  className="rounded-full border px-3 py-1 text-xs font-semibold"
-                  style={{
-                    borderColor: `${getRiskColor(assessment.overallRiskScore)}88`,
-                    color: getRiskColor(assessment.overallRiskScore),
-                    background: getRiskTint(assessment.overallRiskScore),
-                  }}
-                >
-                  {getRiskLabel(assessment.overallRiskLevel)}
-                </div>
-              </div>
-              <div className="mt-5 h-2 rounded-full bg-white/8">
-                <div
-                  className="h-full rounded-full"
-                  style={{
-                    width: `${assessment.overallRiskScore}%`,
-                    background: getRiskColor(assessment.overallRiskScore),
-                  }}
+      <div className="shell flex flex-1 flex-col pb-20 pt-10 sm:pt-12">
+        <div className="mx-auto flex w-full max-w-[68rem] flex-col gap-[4.5rem]">
+          <section className="grid gap-8 lg:grid-cols-[15rem_minmax(0,1fr)] lg:gap-10">
+            <a
+              href={assessment.profile.profileUrl}
+              target="_blank"
+              rel="noreferrer"
+              className="motion-safe:animate-in motion-safe:fade-in-0 motion-safe:zoom-in-95 motion-safe:duration-700 motion-safe:ease-out mx-auto flex size-[13.5rem] items-center justify-center rounded-full bg-foreground/[0.05] ring-1 ring-border transition-all duration-300 ease-out hover:scale-[1.01] hover:opacity-86 lg:mx-0 lg:size-[14.5rem]"
+              style={{ animationDelay: "40ms", animationFillMode: "both" }}
+            >
+              <Avatar className="size-[12rem] rounded-full bg-foreground/[0.08] ring-1 ring-border lg:size-[13rem]">
+                <AvatarImage
+                  src={assessment.profile.avatarUrl}
+                  alt={assessment.profile.displayName}
                 />
-              </div>
-              <Separator className="my-5 bg-white/8" />
-              <div className="space-y-3">
-                {assessment.notes.map((note) => (
-                  <div
-                    key={note}
-                    className="flex gap-3 rounded-[1rem] border border-white/8 bg-black/10 px-3 py-3 text-sm leading-6 text-white/66"
-                  >
-                    <ShieldAlert className="mt-1 size-4 shrink-0 text-white/42" />
-                    <span>{note}</span>
-                  </div>
-                ))}
-              </div>
-            </div>
-          </div>
-        </Card>
+                <AvatarFallback>
+                  {assessment.profile.displayName.slice(0, 1)}
+                </AvatarFallback>
+              </Avatar>
+            </a>
 
-        <Card className="rounded-[2rem] border border-white/10 bg-[#141518]">
-          <CardHeader className="px-6 pt-6">
+            <div
+              className="motion-safe:animate-in motion-safe:fade-in-0 motion-safe:slide-in-from-right-4 motion-safe:duration-700 motion-safe:ease-out flex max-w-[44rem] flex-col"
+              style={{ animationDelay: "110ms", animationFillMode: "both" }}
+            >
+              <a
+                href={assessment.profile.profileUrl}
+                target="_blank"
+                rel="noreferrer"
+                className="inline-flex flex-col self-start transition-opacity duration-300 ease-out hover:opacity-80"
+              >
+                <span className="font-heading text-[2.45rem] leading-[0.96] font-semibold tracking-[-0.05em] text-foreground sm:text-[2.9rem] lg:text-[3.35rem]">
+                  {assessment.profile.displayName}
+                </span>
+                <span className="mt-2 inline-flex items-center gap-2 text-[1.75rem] leading-none text-muted-foreground sm:text-[2rem] lg:text-[2.3rem]">
+                  @{assessment.profile.name}
+                  <ExternalLink className="size-5 lg:size-6" />
+                </span>
+              </a>
+
+              <div
+                className="motion-safe:animate-in motion-safe:fade-in-0 motion-safe:slide-in-from-bottom-2 motion-safe:duration-700 motion-safe:ease-out mt-6 flex flex-wrap items-center gap-3 rounded-[1.2rem] border border-border bg-muted/90 p-3"
+                style={{ animationDelay: "180ms", animationFillMode: "both" }}
+              >
+                <Button
+                  type="button"
+                  variant="outline"
+                  size="lg"
+                  onClick={() => refreshAssessment("profile")}
+                  className="h-11 rounded-full border-border bg-background/70 px-5 text-[0.96rem] text-foreground transition-all duration-300 ease-out hover:bg-accent hover:scale-[1.01]"
+                >
+                  <RefreshCw
+                    className={
+                      refreshScope === "profile"
+                        ? "size-4 animate-spin"
+                        : "size-4"
+                    }
+                  />
+                  Refresh
+                </Button>
+                <Button
+                  type="button"
+                  size="lg"
+                  onClick={saveChild}
+                  disabled={isSaving}
+                  className="h-11 rounded-full bg-primary px-5 text-[0.96rem] text-primary-foreground transition-all duration-300 ease-out hover:bg-primary/92 hover:scale-[1.01]"
+                >
+                  <UserRoundPlus className="size-4" />
+                  {isSaving ? "Saving" : "Save as Child"}
+                </Button>
+              </div>
+
+              <div
+                className="motion-safe:animate-in motion-safe:fade-in-0 motion-safe:slide-in-from-bottom-2 motion-safe:duration-700 motion-safe:ease-out mt-5 flex flex-wrap gap-2.5"
+                style={{ animationDelay: "230ms", animationFillMode: "both" }}
+              >
+                <Badge
+                  variant="outline"
+                  className="h-8 rounded-full border-border bg-foreground/[0.03] px-3.5 text-[0.68rem] tracking-[0.18em] text-muted-foreground uppercase"
+                >
+                  Last assessed {formatTimestamp(assessment.lastAssessed)}
+                </Badge>
+                <Badge
+                  variant="outline"
+                  className="h-8 rounded-full border-border bg-foreground/[0.03] px-3.5 text-[0.68rem] tracking-[0.18em] text-muted-foreground uppercase"
+                >
+                  {assessment.profile.accountAgeDays} day account
+                </Badge>
+                <Badge
+                  variant="outline"
+                  className="h-8 rounded-full border-border bg-foreground/[0.03] px-3.5 text-[0.68rem] tracking-[0.18em] uppercase"
+                  style={{
+                    color: getRiskColor(assessment.overallRiskScore),
+                  }}
+                >
+                  {assessment.overallRiskScore}%{" "}
+                  {getRiskLabel(assessment.overallRiskLevel)}
+                </Badge>
+              </div>
+
+              <NotesBlock
+                summary={assessment.summary}
+                notes={assessment.notes}
+              />
+            </div>
+          </section>
+
+          <section
+            className="motion-safe:animate-in motion-safe:fade-in-0 motion-safe:slide-in-from-bottom-3 motion-safe:duration-700 motion-safe:ease-out space-y-7"
+            style={{ animationDelay: "320ms", animationFillMode: "both" }}
+          >
             <SectionHeader
               title="High-Risk Friends"
-              subtitle="Live friends list, Phase 0 preview weighting, and clickable score breakdowns."
               lastAssessed={assessment.friendsLastAssessed}
               refreshing={refreshScope === "friends"}
               onRefresh={() => refreshAssessment("friends")}
             />
-          </CardHeader>
-          <CardContent className="px-6 pb-6">
             {assessment.highRiskFriends.length ? (
-              <div className="grid gap-4 lg:grid-cols-2">
-                {assessment.highRiskFriends.map((friend) => (
+              <div className="flex flex-wrap gap-x-10 gap-y-8">
+                {assessment.highRiskFriends.map((friend, index) => (
                   <FriendChip
                     key={friend.id}
                     friend={friend}
+                    index={index}
                     onSelect={(nextFriend) =>
                       setDialogSelection({ kind: "friend", item: nextFriend })
                     }
@@ -438,48 +433,50 @@ export function AssessmentShell({
                 ))}
               </div>
             ) : (
-              <div className="rounded-[1.4rem] border border-emerald-400/25 bg-emerald-400/7 px-5 py-5 text-sm text-emerald-200">
+              <p className="text-sm text-emerald-600 dark:text-emerald-300">
                 This user seems to choose their friends well.
-              </div>
+              </p>
             )}
-          </CardContent>
-        </Card>
+          </section>
 
-        <Card className="rounded-[2rem] border border-white/10 bg-[#141518]">
-          <CardHeader className="px-6 pt-6">
+          <section
+            className="motion-safe:animate-in motion-safe:fade-in-0 motion-safe:slide-in-from-bottom-3 motion-safe:duration-700 motion-safe:ease-out space-y-7"
+            style={{ animationDelay: "430ms", animationFillMode: "both" }}
+          >
             <SectionHeader
               title="High-Risk Games"
-              subtitle="Seeded live game cards for Phase 0. Full game scoring and external signal confirmation arrive in later phases."
               lastAssessed={assessment.gamesLastAssessed}
               refreshing={refreshScope === "games"}
               onRefresh={() => refreshAssessment("games")}
             />
-          </CardHeader>
-          <CardContent className="px-6 pb-6">
-            <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-3">
-              {assessment.highRiskGames.map((game) => (
+            <div className="grid grid-cols-[repeat(auto-fill,minmax(15rem,1fr))] gap-6">
+              {assessment.highRiskGames.map((game, index) => (
                 <GameCard
                   key={game.placeId}
                   game={game}
+                  index={index}
                   onSelect={(nextGame) =>
                     setDialogSelection({ kind: "game", item: nextGame })
                   }
                 />
               ))}
             </div>
-          </CardContent>
-        </Card>
+          </section>
 
-        <div className="pb-8">
-          <Button
-            type="button"
-            size="lg"
-            onClick={downloadReport}
-            className="h-12 rounded-[1.25rem] bg-white text-black hover:bg-white/85"
+          <div
+            className="motion-safe:animate-in motion-safe:fade-in-0 motion-safe:zoom-in-95 motion-safe:slide-in-from-bottom-3 motion-safe:duration-700 motion-safe:ease-out flex justify-center pt-6"
+            style={{ animationDelay: "560ms", animationFillMode: "both" }}
           >
-            <Download className="size-4" />
-            Download Report
-          </Button>
+            <Button
+              type="button"
+              size="lg"
+              onClick={downloadReport}
+              className="h-12 min-w-[18rem] rounded-[1rem] bg-primary text-primary-foreground shadow-[0_18px_40px_rgba(0,0,0,0.12)] transition-all duration-300 ease-out hover:scale-[1.01] hover:bg-primary/92"
+            >
+              <Download className="size-4" />
+              Download Report
+            </Button>
+          </div>
         </div>
       </div>
 

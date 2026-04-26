@@ -2,8 +2,10 @@ import type { Metadata } from "next";
 import { Manrope, Sora } from "next/font/google";
 
 import { Providers } from "@/app/providers";
+import { SiteFooter } from "@/components/site-footer";
 import { SiteNav } from "@/components/site-nav";
 import { getSessionSafe, isAuth0Configured } from "@/lib/auth0";
+import { getPreferencesBootstrapScript } from "@/lib/preferences";
 
 import "./globals.css";
 
@@ -33,11 +35,20 @@ export default async function RootLayout({
   return (
     <html
       lang="en"
-      className={`${sora.variable} ${manrope.variable} dark h-full`}
+      data-theme="dark"
+      data-motion="default"
+      data-scroll-behavior="smooth"
+      suppressHydrationWarning
+      className={`${sora.variable} ${manrope.variable} h-full`}
     >
-      <body className="min-h-full font-sans">
-        <Providers>
-          <div className="min-h-dvh">
+      <body suppressHydrationWarning className="min-h-full font-sans">
+        <script
+          dangerouslySetInnerHTML={{
+            __html: getPreferencesBootstrapScript(),
+          }}
+        />
+        <Providers authEnabled={isAuth0Configured} authUser={session?.user}>
+          <div className="flex min-h-dvh flex-col">
             <SiteNav
               authConfigured={isAuth0Configured}
               isLoggedIn={Boolean(session?.user)}
@@ -48,9 +59,10 @@ export default async function RootLayout({
                 "Parent account"
               }
             />
-            <main className="flex min-h-[calc(100dvh-4rem)] flex-col">
+            <main className="flex flex-1 flex-col">
               {children}
             </main>
+            <SiteFooter />
           </div>
         </Providers>
       </body>

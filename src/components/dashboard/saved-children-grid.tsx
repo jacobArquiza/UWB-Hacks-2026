@@ -9,6 +9,8 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { readSavedChildren } from "@/lib/saved-children";
 import type { SavedChildProfile } from "@/lib/types";
 
+const emptySavedChildren = [] as SavedChildProfile[];
+
 export function SavedChildrenGrid({ viewerName }: { viewerName: string }) {
   const children = useSyncExternalStore(
     (onStoreChange) => {
@@ -24,20 +26,20 @@ export function SavedChildrenGrid({ viewerName }: { viewerName: string }) {
       };
     },
     () => readSavedChildren(),
-    () => [] as SavedChildProfile[],
+    () => emptySavedChildren,
   );
 
   return (
     <div className="shell flex flex-1 flex-col gap-6 py-8 sm:py-10">
-      <Card className="rounded-[2rem] border border-white/10 bg-[#141518]">
+      <Card className="rounded-[2rem] border border-border bg-card">
         <CardHeader className="px-6 pt-6">
-          <p className="text-xs tracking-[0.24em] text-white/42 uppercase">
+          <p className="text-xs tracking-[0.24em] text-muted-foreground uppercase">
             Dashboard
           </p>
-          <CardTitle className="font-heading text-4xl text-white">
+          <CardTitle className="font-heading text-4xl text-foreground">
             Saved children for {viewerName}
           </CardTitle>
-          <p className="max-w-2xl text-sm leading-7 text-white/58">
+          <p className="max-w-2xl text-sm leading-7 text-muted-foreground">
             Phase 0 keeps saved profiles in this browser so the flow is fully
             navigable before Supabase persistence is switched on.
           </p>
@@ -49,7 +51,7 @@ export function SavedChildrenGrid({ viewerName }: { viewerName: string }) {
                 <Link
                   key={child.id}
                   href={`/user/${encodeURIComponent(child.name)}`}
-                  className="group rounded-[1.5rem] border border-white/10 bg-white/[0.03] p-4 transition hover:opacity-74"
+                  className="group rounded-[1.5rem] border border-border bg-foreground/[0.03] p-4 transition hover:opacity-74"
                 >
                   <div className="flex items-center gap-4">
                     <Avatar size="lg" className="size-14">
@@ -57,25 +59,25 @@ export function SavedChildrenGrid({ viewerName }: { viewerName: string }) {
                       <AvatarFallback>{child.displayName.slice(0, 1)}</AvatarFallback>
                     </Avatar>
                     <div className="min-w-0 flex-1">
-                      <p className="truncate font-medium text-white">
+                      <p className="truncate font-medium text-foreground">
                         {child.displayName}
                       </p>
-                      <p className="truncate text-sm text-white/52">
+                      <p className="truncate text-sm text-muted-foreground">
                         @{child.name}
                       </p>
                     </div>
-                    <ArrowRight className="size-4 text-white/42 transition group-hover:translate-x-0.5" />
+                    <ArrowRight className="size-4 text-muted-foreground transition group-hover:translate-x-0.5" />
                   </div>
                 </Link>
               ))}
             </div>
           ) : (
-            <div className="flex flex-col items-center justify-center rounded-[1.6rem] border border-dashed border-white/12 bg-white/[0.02] px-6 py-12 text-center">
-              <Ghost className="size-7 text-white/32" />
-              <p className="mt-4 font-heading text-2xl text-white">
+            <div className="flex flex-col items-center justify-center rounded-[1.6rem] border border-dashed border-border bg-foreground/[0.02] px-6 py-12 text-center">
+              <Ghost className="size-7 text-muted-foreground" />
+              <p className="mt-4 font-heading text-2xl text-foreground">
                 No saved children yet
               </p>
-              <p className="mt-2 max-w-xl text-sm leading-7 text-white/56">
+              <p className="mt-2 max-w-xl text-sm leading-7 text-muted-foreground">
                 Search a Roblox account, open its report, and use Save as Child to
                 pin it here.
               </p>

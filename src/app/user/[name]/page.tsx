@@ -30,21 +30,21 @@ export default async function UserPage({
   if (!assessment) {
     return (
       <div className="shell flex flex-1 items-center py-10">
-        <Card className="mx-auto w-full max-w-2xl rounded-[2rem] border border-white/10 bg-[#141518]">
+        <Card className="mx-auto w-full max-w-2xl rounded-[2rem] border border-border bg-card">
           <CardHeader className="px-6 pt-6">
-            <p className="text-xs tracking-[0.24em] text-white/42 uppercase">
+            <p className="text-xs tracking-[0.24em] text-muted-foreground uppercase">
               Profile not found
             </p>
-            <CardTitle className="font-heading text-4xl text-white">
+            <CardTitle className="font-heading text-4xl text-foreground">
               RoRadar could not find @{username}
             </CardTitle>
           </CardHeader>
-          <CardContent className="space-y-4 px-6 pb-6 text-sm leading-7 text-white/58">
+          <CardContent className="space-y-4 px-6 pb-6 text-sm leading-7 text-muted-foreground">
             <p>
               Phase 0 is wired against live Roblox user lookup, so this usually
               means the username does not exist or Roblox declined the request.
             </p>
-            <Link href="/" className="text-white hover:text-white/76">
+            <Link href="/" className="text-foreground hover:text-foreground/76">
               Back to search
             </Link>
           </CardContent>

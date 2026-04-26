@@ -12,16 +12,16 @@ export default async function DashboardPage() {
   if (!session?.user) {
     return (
       <div className="shell flex flex-1 items-center py-10">
-        <Card className="mx-auto w-full max-w-2xl rounded-[2rem] border border-white/10 bg-[#141518]">
+        <Card className="mx-auto w-full max-w-2xl rounded-[2rem] border border-border bg-card">
           <CardHeader className="px-6 pt-6">
-            <p className="text-xs tracking-[0.24em] text-white/42 uppercase">
+            <p className="text-xs tracking-[0.24em] text-muted-foreground uppercase">
               Dashboard locked
             </p>
-            <CardTitle className="font-heading text-4xl text-white">
+            <CardTitle className="font-heading text-4xl text-foreground">
               Log in to see saved children
             </CardTitle>
           </CardHeader>
-          <CardContent className="space-y-5 px-6 pb-6 text-sm leading-7 text-white/60">
+          <CardContent className="space-y-5 px-6 pb-6 text-sm leading-7 text-muted-foreground">
             <p>
               The dashboard is reserved for signed-in parents. Once you log in,
               Save as Child on any profile report will pin that Roblox account
@@ -32,7 +32,7 @@ export default async function DashboardPage() {
                 href="/auth/login"
                 className={cn(
                   buttonVariants({ size: "lg" }),
-                  "inline-flex rounded-[1.2rem] bg-white text-black hover:bg-white/85",
+                  "inline-flex rounded-[1.2rem] bg-primary text-primary-foreground hover:bg-primary/92",
                 )}
               >
                 Log in with Auth0
@@ -40,16 +40,16 @@ export default async function DashboardPage() {
             ) : (
               <div
                 id="auth0-setup"
-                className="rounded-[1.4rem] border border-dashed border-white/14 bg-white/[0.03] p-4 text-white/56"
+                className="rounded-[1.4rem] border border-dashed border-border bg-foreground/[0.03] p-4 text-muted-foreground"
               >
                 Auth0 env variables are not configured yet. Add them in
-                <code className="mx-1 rounded bg-black/20 px-1.5 py-0.5 text-white">
+                <code className="mx-1 rounded bg-foreground/[0.08] px-1.5 py-0.5 text-foreground">
                   .env.local
                 </code>
                 to activate the real login flow.
               </div>
             )}
-            <Link href="/" className="block text-white hover:text-white/76">
+            <Link href="/" className="block text-foreground hover:text-foreground/76">
               Back to landing page
             </Link>
           </CardContent>

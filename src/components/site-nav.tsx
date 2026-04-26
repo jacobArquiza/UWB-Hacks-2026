@@ -1,6 +1,6 @@
 import Link from "next/link";
-import { LayoutDashboard, RadioTower, ShieldAlert } from "lucide-react";
 
+import { SiteSettingsDialog } from "@/components/site-settings-dialog";
 import { buttonVariants } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
 
@@ -15,92 +15,97 @@ export function SiteNav({
   isLoggedIn,
   userLabel,
 }: SiteNavProps) {
+  const authDisabled = !authConfigured;
+
   return (
-    <header className="sticky top-0 z-40 border-b border-white/8 bg-background/82 backdrop-blur-xl">
-      <div className="shell flex h-16 items-center justify-between gap-4">
-        <Link
-          href="/"
-          className="flex min-w-0 items-center gap-3 transition-opacity hover:opacity-75"
-        >
-          <span className="flex size-9 items-center justify-center rounded-2xl border border-white/12 bg-white/[0.04]">
-            <RadioTower className="size-4 text-white/90" />
-          </span>
-          <div className="min-w-0">
-            <p className="font-heading text-sm tracking-[0.24em] text-white/55 uppercase">
-              Placeholder Logo
-            </p>
-            <p className="font-heading text-base text-white">RoRadar</p>
-          </div>
-        </Link>
+    <header className="z-40 px-4 pt-5 sm:px-6 sm:pt-6">
+      <div className="mx-auto w-full max-w-[1600px]">
+        <nav className="rounded-[1.7rem] border border-border bg-card/88 shadow-[0_14px_44px_rgba(0,0,0,0.16)] backdrop-blur-xl">
+          <div className="grid min-h-[4.9rem] grid-cols-[minmax(0,1fr)_auto_minmax(0,1fr)] items-center gap-3 px-5 sm:px-7 lg:px-8">
+            <Link
+              href="/"
+              className="flex min-w-0 items-center justify-self-start transition-opacity hover:opacity-80"
+            >
+              <span className="flex h-11 min-w-[11rem] items-center justify-center rounded-[1rem] bg-foreground px-6 font-heading text-[0.96rem] font-medium text-background sm:min-w-[14rem] lg:min-w-[18rem]">
+                Placeholder Logo
+              </span>
+            </Link>
 
-        <nav className="hidden items-center gap-6 text-sm text-white/58 md:flex">
-          <a href="#approach" className="hover:text-white">
-            Approach
-          </a>
-          <a href="#preview" className="hover:text-white">
-            Preview
-          </a>
-          <Link href="/dashboard" className="hover:text-white">
-            Dashboard
-          </Link>
-        </nav>
-
-        <div className="flex items-center gap-2">
-          {isLoggedIn ? (
-            <>
-              <div className="hidden items-center gap-2 rounded-full border border-white/10 bg-white/[0.03] px-3 py-2 text-sm text-white/75 sm:flex">
-                <ShieldAlert className="size-3.5 text-emerald-300" />
-                <span className="max-w-36 truncate">{userLabel}</span>
-              </div>
+            <div className="hidden items-center gap-1 justify-self-center md:flex">
+              <Link
+                href="/about"
+                className={cn(
+                  buttonVariants({ variant: "ghost", size: "lg" }),
+                  "rounded-xl px-5 text-[0.98rem] font-medium text-muted-foreground hover:bg-foreground/[0.05] hover:text-foreground",
+                )}
+              >
+                About
+              </Link>
               <Link
                 href="/dashboard"
                 className={cn(
-                  buttonVariants({ variant: "outline", size: "sm" }),
-                  "border-white/12 bg-white/[0.02] text-white hover:bg-white/[0.06]",
+                  buttonVariants({ variant: "ghost", size: "lg" }),
+                  "rounded-xl px-5 text-[0.98rem] font-medium text-muted-foreground hover:bg-foreground/[0.05] hover:text-foreground",
                 )}
               >
-                <LayoutDashboard className="size-3.5" />
                 Dashboard
               </Link>
-              <a
-                href="/auth/logout"
-                className={cn(
-                  buttonVariants({ size: "sm" }),
-                  "bg-white text-black hover:bg-white/85",
-                )}
-              >
-                Log out
-              </a>
-            </>
-          ) : (
-            <>
-              <a
-                href={authConfigured ? "/auth/login" : "#auth0-setup"}
-                className={cn(
-                  buttonVariants({ variant: "ghost", size: "sm" }),
-                  "text-white/78 hover:bg-white/[0.04] hover:text-white",
-                  !authConfigured && "pointer-events-none opacity-45",
-                )}
-              >
-                Log in
-              </a>
-              <a
-                href={
-                  authConfigured
-                    ? "/auth/login?screen_hint=signup"
-                    : "#auth0-setup"
-                }
-                className={cn(
-                  buttonVariants({ size: "sm" }),
-                  "bg-white text-black hover:bg-white/85",
-                  !authConfigured && "pointer-events-none opacity-45",
-                )}
-              >
-                Sign up
-              </a>
-            </>
-          )}
-        </div>
+            </div>
+
+            <div className="flex items-center gap-2.5 justify-self-end sm:gap-3">
+              <SiteSettingsDialog />
+              {isLoggedIn ? (
+                <>
+                  <Link
+                    href="/dashboard"
+                    className={cn(
+                      buttonVariants({ variant: "ghost", size: "lg" }),
+                      "hidden rounded-xl px-4 text-[0.95rem] font-medium text-muted-foreground hover:bg-foreground/[0.05] hover:text-foreground lg:inline-flex",
+                    )}
+                  >
+                    {userLabel}
+                  </Link>
+                  <a
+                    href="/auth/logout"
+                    className={cn(
+                      buttonVariants({ variant: "outline", size: "lg" }),
+                      "rounded-[0.95rem] border-border bg-foreground/[0.03] px-5 text-foreground hover:bg-foreground/[0.06]",
+                    )}
+                  >
+                    Log out
+                  </a>
+                </>
+              ) : (
+                <>
+                  <a
+                    href={authConfigured ? "/auth/login" : "#auth0-setup"}
+                    className={cn(
+                      buttonVariants({ variant: "ghost", size: "lg" }),
+                      "hidden rounded-xl px-4 text-[0.95rem] font-medium text-muted-foreground hover:bg-foreground/[0.05] hover:text-foreground sm:inline-flex",
+                      authDisabled && "pointer-events-none opacity-45",
+                    )}
+                  >
+                    Login
+                  </a>
+                  <a
+                    href={
+                      authConfigured
+                        ? "/auth/login?screen_hint=signup"
+                        : "#auth0-setup"
+                    }
+                    className={cn(
+                      buttonVariants({ size: "lg" }),
+                      "rounded-[0.95rem] bg-primary px-5 text-primary-foreground shadow-[0_12px_30px_rgba(40,80,255,0.18)] hover:bg-primary/92",
+                      authDisabled && "pointer-events-none opacity-45",
+                    )}
+                  >
+                    Sign Up
+                  </a>
+                </>
+              )}
+            </div>
+          </div>
+        </nav>
       </div>
     </header>
   );

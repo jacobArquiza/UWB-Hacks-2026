@@ -11,9 +11,15 @@ RoRadar is a parental awareness tool for Roblox safety. Phase 0 focuses on:
 ## Run locally
 
 1. Copy `.env.example` to `.env.local`.
-2. Add real Auth0 values if you want the login flow to work.
-3. Add Supabase URL and anon key when you are ready to connect the project.
-4. Start the app:
+2. Create an Auth0 `Regular Web Application`.
+3. Add these Auth0 application URLs:
+   Allowed Callback URLs: `http://localhost:3000/auth/callback`
+   Allowed Logout URLs: `http://localhost:3000`
+   Allowed Web Origins: `http://localhost:3000`
+4. Add the real Auth0 values to `.env.local` if you want the login flow to work.
+5. Rebuild or restart the app after changing Auth0 env vars.
+6. Add Supabase URL and anon key when you are ready to connect the project.
+7. Start the app:
 
 ```bash
 npm install

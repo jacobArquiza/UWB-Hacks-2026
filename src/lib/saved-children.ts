@@ -1,22 +1,39 @@
 import type { SavedChildProfile } from "@/lib/types";
 
 const savedChildrenKey = "roradar.saved-children.phase0";
+const emptySavedChildren = [] as SavedChildProfile[];
+
+let cachedRawValue: string | null = null;
+let cachedChildren: SavedChildProfile[] = emptySavedChildren;
 
 export function readSavedChildren() {
   if (typeof window === "undefined") {
-    return [] as SavedChildProfile[];
+    return emptySavedChildren;
   }
 
   try {
     const rawValue = window.localStorage.getItem(savedChildrenKey);
 
     if (!rawValue) {
-      return [] as SavedChildProfile[];
+      cachedRawValue = null;
+      cachedChildren = emptySavedChildren;
+
+      return cachedChildren;
     }
 
-    return JSON.parse(rawValue) as SavedChildProfile[];
+    if (rawValue === cachedRawValue) {
+      return cachedChildren;
+    }
+
+    cachedRawValue = rawValue;
+    cachedChildren = JSON.parse(rawValue) as SavedChildProfile[];
+
+    return cachedChildren;
   } catch {
-    return [] as SavedChildProfile[];
+    cachedRawValue = null;
+    cachedChildren = emptySavedChildren;
+
+    return cachedChildren;
   }
 }
 
