@@ -8,7 +8,7 @@ import { Input } from "@/components/ui/input";
 
 export function SearchHero() {
   const router = useRouter();
-  const [username, setUsername] = useState("KingRobloxsian20");
+  const [username, setUsername] = useState("");
   const [isPending, startTransition] = useTransition();
   const deferredUsername = useDeferredValue(username.trim());
 
