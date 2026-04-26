@@ -16,9 +16,6 @@ const reportPageHeight = 792;
 const reportPageMargin = 48;
 const reportFooterReserve = 34;
 const reportContentTopY = reportPageHeight - reportPageMargin - 8;
-const reportColumnGap = 24;
-const reportColumnWidth =
-  (reportPageWidth - reportPageMargin * 2 - reportColumnGap) / 2;
 
 type PdfLineStyle = {
   color: ReturnType<typeof rgb>;
@@ -558,7 +555,7 @@ function getPdfLineBlockHeight(
   );
 }
 
-function renderColumnBlocks(params: {
+function renderFullWidthBlocks(params: {
   document: PDFDocument;
   fonts: {
     body: PDFFont;
@@ -566,52 +563,40 @@ function renderColumnBlocks(params: {
   };
   blocks: PdfLineBlock[];
   page: PDFPage;
-  startY: number;
+  y: number;
 }) {
-  let { page } = params;
-  let columnTopY = params.startY;
-
-  if (columnTopY < reportPageMargin + reportFooterReserve + 80) {
-    page = createReportPdfPage(params.document, params.fonts);
-    columnTopY = reportContentTopY;
-  }
-
-  let columnIndex = 0;
-  let columnY = columnTopY;
+  let { page, y } = params;
 
   for (const block of params.blocks) {
     const blockHeight = getPdfLineBlockHeight(
       block,
       params.fonts,
-      reportColumnWidth,
+      reportPageWidth - reportPageMargin * 2,
     );
 
-    if (columnY - blockHeight < reportPageMargin + reportFooterReserve) {
-      if (columnIndex === 0) {
-        columnIndex = 1;
-        columnY = columnTopY;
-      } else {
-        page = createReportPdfPage(params.document, params.fonts);
-        columnTopY = reportContentTopY;
-        columnIndex = 0;
-        columnY = columnTopY;
-      }
+    if (y - blockHeight < reportPageMargin + reportFooterReserve) {
+      page = createReportPdfPage(params.document, params.fonts);
+      y = reportContentTopY;
     }
 
     for (const line of block.lines) {
-      const preparedBlock = preparePdfBlock(line, params.fonts, reportColumnWidth);
-      columnY = drawPdfBlock(
+      const preparedBlock = preparePdfBlock(
+        line,
+        params.fonts,
+        reportPageWidth - reportPageMargin * 2,
+      );
+      y = drawPdfBlock(
         page,
-        columnY,
-        reportPageMargin + columnIndex * (reportColumnWidth + reportColumnGap),
+        y,
+        reportPageMargin,
         preparedBlock,
       );
     }
 
-    columnY -= 4;
+    y -= 4;
   }
 
-  return { page };
+  return { page, y };
 }
 
 export async function buildReportPdf(assessment: UserAssessment) {
@@ -686,12 +671,12 @@ export async function buildReportPdf(assessment: UserAssessment) {
   }));
 
   if (gameBlocks.length) {
-    ({ page } = renderColumnBlocks({
+    ({ page } = renderFullWidthBlocks({
       document,
       fonts,
       blocks: gameBlocks,
       page,
-      startY: y - 6,
+      y: y - 6,
     }));
   }
 

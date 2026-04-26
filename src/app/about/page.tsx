@@ -61,7 +61,7 @@ export default function AboutPage() {
                   </h1>
                   <p className="mt-6 max-w-3xl text-sm leading-8 text-muted-foreground sm:text-[0.98rem]">
                     RoRadar was built around a critical problem: parents hear 
-                    all the time about the dangers of roblox, but they don't 
+                    all the time about the dangers of roblox, but they do not 
                     know where the risk actually is. They need to be able to  
                     see whether those games, friend networks, or community
                     spaces have already raised safety concerns elsewhere.
