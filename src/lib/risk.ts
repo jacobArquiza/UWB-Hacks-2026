@@ -13,7 +13,7 @@ export function getRiskLevel(score: number): RiskLevel {
     return "elevated";
   }
 
-  if (score >= 36) {
+  if (score >= 35) {
     return "guarded";
   }
 
@@ -42,7 +42,7 @@ export function getRiskColor(score: number) {
     return "#f3b55d";
   }
 
-  if (score >= 36) {
+  if (score >= 35) {
     return "#d6cf8b";
   }
 
@@ -58,7 +58,7 @@ export function getRiskTint(score: number) {
     return "rgba(243, 181, 93, 0.14)";
   }
 
-  if (score >= 36) {
+  if (score >= 35) {
     return "rgba(214, 207, 139, 0.12)";
   }
 

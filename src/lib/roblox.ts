@@ -211,6 +211,15 @@ export async function getRobloxFriends(userId: number, limit = 12) {
   return Promise.all(userIds.map((friendId) => getRobloxUserById(friendId)));
 }
 
+export async function getRobloxFriendIds(userId: number) {
+  const payload = await robloxFetch<RobloxFriendResponse>(
+    `https://friends.roblox.com/v1/users/${userId}/friends`,
+    { headers: {} },
+  ).catch(() => ({ data: [] }));
+
+  return payload.data.map((friend) => friend.id);
+}
+
 function buildCreatorUrl(creator: RobloxGameCreator) {
   if (creator.type === "Group") {
     return `https://www.roblox.com/groups/${creator.id}/group`;

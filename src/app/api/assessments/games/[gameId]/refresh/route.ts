@@ -9,10 +9,49 @@ export async function POST(
 ) {
   const { gameId } = await params;
   const payload = (await request.json().catch(() => null)) as
-    | { wideWebSearchMode?: WideWebSearchMode }
+    | { streamProgress?: boolean; wideWebSearchMode?: WideWebSearchMode }
     | null;
+  const encoder = new TextEncoder();
 
   try {
+    if (payload?.streamProgress) {
+      const stream = new ReadableStream({
+        async start(controller) {
+          try {
+            const game = await buildPreviewGameById(Number(gameId), {
+              wideWebSearchMode: payload?.wideWebSearchMode ?? "prefer-cache",
+              onWideWebStage: (stage) => {
+                controller.enqueue(
+                  encoder.encode(`${JSON.stringify({ stage })}\n`),
+                );
+              },
+            });
+            controller.enqueue(encoder.encode(`${JSON.stringify({ game })}\n`));
+          } catch (error) {
+            controller.enqueue(
+              encoder.encode(
+                `${JSON.stringify({
+                  error:
+                    error instanceof Error
+                      ? error.message
+                      : "Could not refresh game.",
+                })}\n`,
+              ),
+            );
+          } finally {
+            controller.close();
+          }
+        },
+      });
+
+      return new Response(stream, {
+        headers: {
+          "content-type": "application/x-ndjson; charset=utf-8",
+          "cache-control": "no-store",
+        },
+      });
+    }
+
     const game = await buildPreviewGameById(Number(gameId), {
       wideWebSearchMode: payload?.wideWebSearchMode ?? "prefer-cache",
     });

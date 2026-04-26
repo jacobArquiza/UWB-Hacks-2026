@@ -4,6 +4,7 @@ import { AssessmentShell } from "@/components/assessment/assessment-shell";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { buildPreviewAssessment } from "@/lib/assessment";
 import { getSessionSafe, isAuth0Configured } from "@/lib/auth0";
+import { isGemmaWideWebClassifierEnabled } from "@/lib/gemma";
 
 export const dynamic = "force-dynamic";
 
@@ -57,6 +58,7 @@ export default async function UserPage({
     <AssessmentShell
       initialAssessment={assessment}
       authConfigured={isAuth0Configured}
+      gemmaWideWebConfigured={isGemmaWideWebClassifierEnabled()}
       isLoggedIn={isLoggedIn}
     />
   );

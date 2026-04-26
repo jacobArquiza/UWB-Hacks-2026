@@ -28,7 +28,9 @@ type RiskDetailDialogProps = {
   entity: RiskDialogEntity;
   open: boolean;
   onOpenChange: (open: boolean) => void;
+  gemmaWideWebConfigured?: boolean;
   onRefreshWideWeb?: () => void;
+  wideWebLiveSearchStage?: "tavily" | "gemma" | null;
   wideWebRefreshPending?: boolean;
 };
 
@@ -89,23 +91,31 @@ function FactorNote({
 
 function FactorRow({
   factor,
+  gemmaWideWebConfigured = false,
   onRefreshWideWeb,
+  wideWebLiveSearchStage = null,
   wideWebRefreshPending = false,
 }: {
   factor: RiskFactor;
+  gemmaWideWebConfigured?: boolean;
   onRefreshWideWeb?: () => void;
+  wideWebLiveSearchStage?: "tavily" | "gemma" | null;
   wideWebRefreshPending?: boolean;
 }) {
   const isWideWebFactor = factor.key === "wide-web-safety-search";
+  const isTavilyStage = isWideWebFactor && wideWebLiveSearchStage === "tavily";
+  const isGemmaStage = isWideWebFactor && wideWebLiveSearchStage === "gemma";
 
   return (
     <Card
       className={cn(
         "overflow-visible rounded-[1rem] py-0 shadow-none",
-        isWideWebFactor && wideWebRefreshPending
-          ? "bg-sky-500/[0.08] ring-2 ring-sky-400/35 shadow-[0_0_32px_rgba(56,189,248,0.12)]"
+        isTavilyStage
+          ? "bg-sky-500/[0.08] ring-2 ring-sky-400/35 shadow-[0_0_32px_rgba(56,189,248,0.14)]"
+          : isGemmaStage
+            ? "bg-emerald-500/[0.08] ring-2 ring-emerald-400/35 shadow-[0_0_32px_rgba(52,211,153,0.14)]"
           : isWideWebFactor
-            ? "bg-sky-500/[0.05] ring-1 ring-sky-400/20"
+            ? "bg-emerald-500/[0.05] ring-1 ring-emerald-400/20"
           : "bg-foreground/[0.025] ring-1 ring-border",
       )}
     >
@@ -128,7 +138,9 @@ function FactorRow({
                 <RefreshCw
                   className={
                     wideWebRefreshPending
-                      ? "size-3 animate-spin text-sky-400"
+                      ? `size-3 animate-spin ${
+                          isTavilyStage ? "text-sky-500" : "text-emerald-500"
+                        }`
                       : "size-3"
                   }
                 />
@@ -136,13 +148,52 @@ function FactorRow({
               </Button>
             ) : null}
           </div>
-          {isWideWebFactor && wideWebRefreshPending ? (
-            <div className="mt-2 inline-flex items-center gap-2 rounded-full border border-sky-400/30 bg-sky-500/10 px-3 py-1 text-[0.72rem] font-medium text-sky-700 dark:text-sky-200">
-              <span className="relative flex size-2.5">
-                <span className="absolute inline-flex h-full w-full animate-ping rounded-full bg-sky-400 opacity-75" />
-                <span className="relative inline-flex size-2.5 rounded-full bg-sky-400" />
-              </span>
-              Searching Tavily for wide web evidence
+          {isWideWebFactor && (isTavilyStage || isGemmaStage) ? (
+            <div className="mt-2 flex flex-wrap items-center gap-2">
+              <div
+                className={cn(
+                  "inline-flex items-center gap-2 rounded-full px-3 py-1 text-[0.72rem] font-medium",
+                  isTavilyStage
+                    ? "border border-sky-400/30 bg-sky-500/10 text-sky-700 dark:text-sky-200"
+                    : "border border-sky-400/20 bg-sky-500/5 text-sky-700/70 dark:text-sky-200/70",
+                )}
+              >
+                <span className="relative flex size-2.5">
+                  {isTavilyStage ? (
+                    <span className="absolute inline-flex h-full w-full animate-ping rounded-full bg-sky-400 opacity-75" />
+                  ) : null}
+                  <span
+                    className={cn(
+                      "relative inline-flex size-2.5 rounded-full",
+                      isTavilyStage ? "bg-sky-400" : "bg-sky-400/65",
+                    )}
+                  />
+                </span>
+                Running Tavily Search
+              </div>
+              {gemmaWideWebConfigured ? (
+                <div
+                  className={cn(
+                    "inline-flex items-center gap-2 rounded-full px-3 py-1 text-[0.72rem] font-medium",
+                    isGemmaStage
+                      ? "border border-emerald-400/30 bg-emerald-500/10 text-emerald-700 dark:text-emerald-200"
+                      : "border border-emerald-400/20 bg-emerald-500/5 text-emerald-700/70 dark:text-emerald-200/70",
+                  )}
+                >
+                  <span className="relative flex size-2.5">
+                    {isGemmaStage ? (
+                      <span className="absolute inline-flex h-full w-full animate-ping rounded-full bg-emerald-400 opacity-75" />
+                    ) : null}
+                    <span
+                      className={cn(
+                        "relative inline-flex size-2.5 rounded-full",
+                        isGemmaStage ? "bg-emerald-400" : "bg-emerald-400/65",
+                      )}
+                    />
+                  </span>
+                  Running Gemma 4 Analysis
+                </div>
+              ) : null}
             </div>
           ) : null}
           {factor.observedSignals?.length ? (
@@ -207,7 +258,9 @@ export function RiskDetailDialog({
   entity,
   open,
   onOpenChange,
+  gemmaWideWebConfigured = false,
   onRefreshWideWeb,
+  wideWebLiveSearchStage = null,
   wideWebRefreshPending = false,
 }: RiskDetailDialogProps) {
   const friend = entity?.kind === "friend" ? entity.item : null;
@@ -353,11 +406,13 @@ export function RiskDetailDialog({
                     <FactorRow
                       key={factor.key}
                       factor={factor}
+                      gemmaWideWebConfigured={gemmaWideWebConfigured}
                       onRefreshWideWeb={
                         factor.key === "wide-web-safety-search"
                           ? onRefreshWideWeb
                           : undefined
                       }
+                      wideWebLiveSearchStage={wideWebLiveSearchStage}
                       wideWebRefreshPending={wideWebRefreshPending}
                     />
                   ))}

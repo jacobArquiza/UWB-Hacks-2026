@@ -1,3 +1,9 @@
+import {
+  classifyWideWebEvidenceBatch,
+  getGemmaWideWebClassifierLabel,
+  isGemmaWideWebClassifierEnabled,
+  type GemmaWideWebCandidate,
+} from "@/lib/gemma";
 import { readWideWebScanCache, writeWideWebScanCache } from "@/lib/wide-web-cache-store";
 import {
   isWideWebGameScanEnabled,
@@ -48,6 +54,11 @@ type WideWebRiskScanResult = {
   fetchedAt?: string;
   persisted?: boolean;
   source?: "cache" | "live";
+};
+
+type WideWebSearchClassificationResult = {
+  matches: ExternalCommunityMatch[];
+  searchedSources: string[];
 };
 
 type RedditSearchResponse = {
@@ -410,6 +421,21 @@ function buildExternalCommunityMatch(params: {
   } satisfies ExternalCommunityMatch;
 }
 
+function summarizeGemmaClassification(params: {
+  riskCategory: string;
+  confidence: number;
+  rationale: string;
+  evidenceBullets: string[];
+}) {
+  const category = params.riskCategory.replace(/_/g, " ");
+  const confidence = Math.round(params.confidence * 100);
+  const evidence = params.evidenceBullets.length
+    ? `; evidence ${params.evidenceBullets.slice(0, 2).join(" | ")}`
+    : "";
+
+  return `Gemma confirmed exact-game ${category} (${confidence}% confidence); ${params.rationale}${evidence}`;
+}
+
 const wideWebExcludedDomains = [
   "roblox.com",
   "www.roblox.com",
@@ -566,7 +592,13 @@ async function scanDevForum(gameName: string) {
     .filter((match): match is ExternalCommunityMatch => match != null);
 }
 
-async function scanWideWeb(gameName: string) {
+async function scanWideWeb(
+  gameName: string,
+  options: {
+    onStage?: (stage: "tavily" | "gemma") => void;
+  } = {},
+): Promise<WideWebSearchClassificationResult> {
+  options.onStage?.("tavily");
   const titleCandidates = buildWideWebTitleCandidates(gameName);
   const payloads = await Promise.all(
     buildWideWebSearchQueries(gameName).map((query) =>
@@ -592,9 +624,9 @@ async function scanWideWeb(gameName: string) {
       seenUrls.add(result.url);
       return true;
     });
-
-  return results
-    .map((result) => {
+  const gemmaEnabled = isGemmaWideWebClassifierEnabled();
+  const candidateMatches = results
+    .map((result, index) => {
       const haystack = [
         result.title ?? "",
         result.content ?? "",
@@ -618,7 +650,7 @@ async function scanWideWeb(gameName: string) {
         return null;
       }
 
-      return buildExternalCommunityMatch({
+      const match = buildExternalCommunityMatch({
         label: "Wide web",
         source: getResultDomain(result.url),
         title: result.title || "Search result",
@@ -628,8 +660,101 @@ async function scanWideWeb(gameName: string) {
         allowContextOnly: true,
         minimumContextWeight: 40,
       });
+
+      if (!match) {
+        return null;
+      }
+
+      return {
+        id: String(index),
+        haystack,
+        titleMatched: mentionsAnyKnownGameTitle(haystack, titleCandidates),
+        result,
+        match,
+      };
+    })
+    .filter(
+      (
+        candidate,
+      ): candidate is {
+        id: string;
+        haystack: string;
+        titleMatched: boolean;
+        result: NonNullable<(typeof results)[number]>;
+        match: ExternalCommunityMatch;
+      } => candidate != null,
+    );
+
+  let gemmaClassifications = new Map<
+    string,
+    Awaited<ReturnType<typeof classifyWideWebEvidenceBatch>>[number]
+  >();
+
+  if (gemmaEnabled && candidateMatches.length) {
+    try {
+      options.onStage?.("gemma");
+      const classifications = await classifyWideWebEvidenceBatch({
+        gameName,
+        candidates: candidateMatches.slice(0, 4).map(
+          (candidate) =>
+            ({
+              id: candidate.id,
+              title: candidate.result.title ?? "Search result",
+              url: candidate.result.url,
+              snippet: candidate.result.content ?? "",
+              rawContent: candidate.result.raw_content ?? candidate.haystack,
+            }) satisfies GemmaWideWebCandidate,
+        ),
+      });
+
+      gemmaClassifications = new Map(
+        classifications.map((classification) => [classification.id, classification]),
+      );
+    } catch {
+      gemmaClassifications = new Map();
+    }
+  }
+
+  const gemmaClassificationAvailable = gemmaEnabled && gemmaClassifications.size > 0;
+  const matches = candidateMatches
+    .map((candidate) => {
+      if (gemmaClassificationAvailable) {
+        const classification = gemmaClassifications.get(candidate.id);
+
+        if (
+          !classification ||
+          !classification.gameSpecific ||
+          !classification.supportsRiskContribution ||
+          classification.confidence < 0.65
+        ) {
+          return null;
+        }
+
+        return {
+          ...candidate.match,
+          summary: `${candidate.match.summary}; ${summarizeGemmaClassification({
+            riskCategory: classification.riskCategory,
+            confidence: classification.confidence,
+            rationale: classification.rationale,
+            evidenceBullets: classification.evidenceBullets,
+          })}`,
+        } satisfies ExternalCommunityMatch;
+      }
+
+      if (!candidate.titleMatched) {
+        return null;
+      }
+
+      return candidate.match;
     })
     .filter((match): match is ExternalCommunityMatch => match != null);
+
+  return {
+    matches,
+    searchedSources: gemmaClassificationAvailable
+      ? ["Tavily", getGemmaWideWebClassifierLabel()]
+      : ["Tavily"],
+  };
 }
 
 function buildWideWebCacheKey(placeId: number) {
@@ -642,6 +767,7 @@ function buildWideWebResult(
     fetchedAt: string;
     persisted: boolean;
     source: "cache" | "live";
+    searchedSources: string[];
   },
 ) {
   return {
@@ -651,7 +777,7 @@ function buildWideWebResult(
       100,
       matches.slice(0, 3).reduce((total, match) => total + match.weight, 0),
     ),
-    searchedSources: ["Tavily"],
+    searchedSources: options.searchedSources,
     matches,
     fetchedAt: options.fetchedAt,
     persisted: options.persisted,
@@ -726,6 +852,7 @@ export async function getWideWebRiskScan(
   options: {
     allowLiveSearch?: boolean;
     forceRefresh?: boolean;
+    onStage?: (stage: "tavily" | "gemma") => void;
   } = {},
 ) {
   const allowLiveSearch = options.allowLiveSearch ?? true;
@@ -754,6 +881,7 @@ export async function getWideWebRiskScan(
         fetchedAt: storedScan.fetchedAt,
         persisted: true,
         source: "cache",
+        searchedSources: storedScan.searchedSources,
       });
 
       wideWebResultCache.set(cacheKey, {
@@ -785,8 +913,10 @@ export async function getWideWebRiskScan(
     } satisfies WideWebRiskScanResult;
   }
 
-  const promise = scanWideWeb(game.name)
-    .then(async (matches) => {
+  const promise = scanWideWeb(game.name, {
+    onStage: options.onStage,
+  })
+    .then(async ({ matches, searchedSources }) => {
       const fetchedAt = new Date().toISOString();
       const persisted =
         (await writeWideWebScanCache(game, {
@@ -796,13 +926,14 @@ export async function getWideWebRiskScan(
             100,
             matches.slice(0, 3).reduce((total, match) => total + match.weight, 0),
           ),
-          searchedSources: ["Tavily"],
+          searchedSources,
         })) ?? false;
 
       return buildWideWebResult(matches, {
         fetchedAt,
         persisted,
         source: "live",
+        searchedSources,
       });
     })
     .catch((error) => ({

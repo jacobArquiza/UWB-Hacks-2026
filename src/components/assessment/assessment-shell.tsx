@@ -3,19 +3,24 @@
 import Image from "next/image";
 import { useState, useTransition, type ReactNode } from "react";
 import {
-  Download,
   ExternalLink,
+  FileText,
   RefreshCw,
   ShieldAlert,
   UserRoundPlus,
 } from "lucide-react";
 import { toast } from "sonner";
 
+import { ReportPreviewDialog } from "@/components/assessment/report-preview-dialog";
 import { RiskDetailDialog } from "@/components/assessment/risk-detail-dialog";
 import { usePreferences } from "@/components/preferences-provider";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
+import {
+  surfacedGameLimit,
+  surfacedRiskThreshold,
+} from "@/lib/assessment-thresholds";
 import { formatTimestamp } from "@/lib/format";
 import { getRiskColor, getRiskLabel } from "@/lib/risk";
 import { upsertSavedChild } from "@/lib/saved-children";
@@ -30,6 +35,7 @@ import type {
 type AssessmentShellProps = {
   initialAssessment: UserAssessment;
   authConfigured: boolean;
+  gemmaWideWebConfigured: boolean;
   isLoggedIn: boolean;
 };
 
@@ -38,6 +44,7 @@ type DialogSelection =
   | { kind: "friend"; item: FriendRiskSummary }
   | { kind: "game"; item: GameRiskSummary }
   | null;
+type WideWebLiveSearchStage = "tavily" | "gemma" | null;
 
 function SectionHeader({
   title,
@@ -199,16 +206,27 @@ function NotesBlock({ summary, notes }: { summary: string; notes: string[] }) {
 export function AssessmentShell({
   initialAssessment,
   authConfigured,
+  gemmaWideWebConfigured,
   isLoggedIn,
 }: AssessmentShellProps) {
   const { wideWebSearchEnabled } = usePreferences();
   const [assessment, setAssessment] = useState(initialAssessment);
   const [refreshScope, setRefreshScope] = useState<RefreshScope | null>(null);
   const [isSaving, setIsSaving] = useState(false);
+  const [isReportPreviewLoading, setIsReportPreviewLoading] = useState(false);
+  const [isReportPreviewOpen, setIsReportPreviewOpen] = useState(false);
   const [dialogSelection, setDialogSelection] = useState<DialogSelection>(null);
   const [loadingGameDetailId, setLoadingGameDetailId] = useState<number | null>(null);
+  const [wideWebLiveSearchStage, setWideWebLiveSearchStage] =
+    useState<WideWebLiveSearchStage>(null);
+  const [showAllFriends, setShowAllFriends] = useState(false);
   const [showAllGames, setShowAllGames] = useState(false);
   const [, startTransition] = useTransition();
+  const hasAdditionalScoredFriends =
+    assessment.scoredFriends.length > assessment.highRiskFriends.length;
+  const visibleFriends = showAllFriends
+    ? assessment.scoredFriends
+    : assessment.highRiskFriends;
   const hasAdditionalScoredGames =
     assessment.scoredGames.length > assessment.highRiskGames.length;
   const visibleGames = showAllGames
@@ -226,6 +244,7 @@ export function AssessmentShell({
     }
 
     setLoadingGameDetailId(game.placeId);
+    setWideWebLiveSearchStage(null);
 
     try {
       const response = await fetch(`/api/assessments/games/${game.placeId}/refresh`, {
@@ -234,6 +253,7 @@ export function AssessmentShell({
           "content-type": "application/json",
         },
         body: JSON.stringify({
+          streamProgress: true,
           wideWebSearchMode,
         }),
       });
@@ -242,7 +262,70 @@ export function AssessmentShell({
         throw new Error("Could not load expanded game detail.");
       }
 
-      const payload = (await response.json()) as { game: GameRiskSummary };
+      let payload: { game: GameRiskSummary } | null = null;
+
+      if (response.body) {
+        const reader = response.body.getReader();
+        const decoder = new TextDecoder();
+        let buffer = "";
+
+        while (true) {
+          const { done, value } = await reader.read();
+
+          if (done) {
+            break;
+          }
+
+          buffer += decoder.decode(value, { stream: true });
+          const lines = buffer.split("\n");
+          buffer = lines.pop() ?? "";
+
+          for (const line of lines) {
+            if (!line.trim()) {
+              continue;
+            }
+
+            const event = JSON.parse(line) as
+              | { error: string }
+              | { game: GameRiskSummary }
+              | { stage: "tavily" | "gemma" };
+
+            if ("stage" in event) {
+              setWideWebLiveSearchStage(event.stage);
+              continue;
+            }
+
+            if ("error" in event) {
+              throw new Error(event.error);
+            }
+
+            if ("game" in event) {
+              payload = { game: event.game };
+            }
+          }
+        }
+
+        if (buffer.trim()) {
+          const event = JSON.parse(buffer) as
+            | { error: string }
+            | { game: GameRiskSummary }
+            | { stage: "tavily" | "gemma" };
+
+          if ("stage" in event) {
+            setWideWebLiveSearchStage(event.stage);
+          } else if ("error" in event) {
+            throw new Error(event.error);
+          } else {
+            payload = { game: event.game };
+          }
+        }
+      } else {
+        payload = (await response.json()) as { game: GameRiskSummary };
+      }
+
+      if (!payload) {
+        throw new Error("Could not load expanded game detail.");
+      }
 
       startTransition(() => {
         setDialogSelection((current) =>
@@ -261,8 +344,8 @@ export function AssessmentShell({
             ...current,
             scoredGames: nextScoredGames,
             highRiskGames: nextScoredGames
-              .filter((entry) => entry.score >= 60)
-              .slice(0, 6),
+              .filter((entry) => entry.score >= surfacedRiskThreshold)
+              .slice(0, surfacedGameLimit),
             gamesLastAssessed: payload.game.lastAssessed,
           };
         });
@@ -275,6 +358,7 @@ export function AssessmentShell({
       );
     } finally {
       setLoadingGameDetailId(null);
+      setWideWebLiveSearchStage(null);
     }
   }
 
@@ -371,10 +455,17 @@ export function AssessmentShell({
     }
   }
 
-  function downloadReport() {
-    window.location.href = `/api/reports/users/${encodeURIComponent(
-      assessment.profile.name,
-    )}`;
+  const reportPreviewBaseUrl = `/api/reports/users/${encodeURIComponent(
+    assessment.profile.name,
+  )}/pdf`;
+  const reportPreviewUrl = `${reportPreviewBaseUrl}?preview=${encodeURIComponent(
+    assessment.lastAssessed,
+  )}`;
+  const reportDownloadUrl = `${reportPreviewBaseUrl}?download=1`;
+
+  function openReportPreview() {
+    setIsReportPreviewLoading(true);
+    setIsReportPreviewOpen(true);
   }
 
   async function openGameDetail(game: GameRiskSummary) {
@@ -498,14 +589,35 @@ export function AssessmentShell({
             style={{ animationDelay: "320ms", animationFillMode: "both" }}
           >
             <SectionHeader
-              title="High-Risk Friends"
+              title="Flagged Friends"
               lastAssessed={assessment.friendsLastAssessed}
               refreshing={refreshScope === "friends"}
               onRefresh={() => refreshAssessment("friends")}
+              actions={
+                hasAdditionalScoredFriends ? (
+                  <Button
+                    type="button"
+                    variant="outline"
+                    size="lg"
+                    onClick={() => setShowAllFriends((current) => !current)}
+                    className="h-10 rounded-full border-border bg-foreground/[0.03] px-4 text-[0.77rem] tracking-[0.12em] text-foreground uppercase hover:bg-foreground/[0.06]"
+                  >
+                    {showAllFriends
+                      ? `Show flagged only (${assessment.highRiskFriends.length})`
+                      : `Show all scored friends (${assessment.scoredFriends.length})`}
+                  </Button>
+                ) : undefined
+              }
             />
-            {assessment.highRiskFriends.length ? (
+            {showAllFriends && assessment.scoredFriends.length ? (
+              <p className="text-sm text-muted-foreground">
+                Showing every scored public friend, including profiles below the{" "}
+                {surfacedRiskThreshold}% review threshold.
+              </p>
+            ) : null}
+            {visibleFriends.length ? (
               <div className="flex flex-wrap gap-x-10 gap-y-8">
-                {assessment.highRiskFriends.map((friend, index) => (
+                {visibleFriends.map((friend, index) => (
                   <FriendChip
                     key={friend.id}
                     friend={friend}
@@ -516,9 +628,15 @@ export function AssessmentShell({
                   />
                 ))}
               </div>
+            ) : assessment.scoredFriends.length ? (
+              <p className="text-sm text-muted-foreground">
+                No public friends crossed the {surfacedRiskThreshold}% review
+                threshold. Use Show all scored friends to inspect the
+                lower-score profiles.
+              </p>
             ) : (
-              <p className="text-sm text-emerald-600 dark:text-emerald-300">
-                This user seems to choose their friends well.
+              <p className="text-sm text-muted-foreground">
+                No public friends were available to score.
               </p>
             )}
           </section>
@@ -528,7 +646,7 @@ export function AssessmentShell({
             style={{ animationDelay: "430ms", animationFillMode: "both" }}
           >
             <SectionHeader
-              title="High-Risk Games"
+              title="Flagged Games"
               lastAssessed={assessment.gamesLastAssessed}
               refreshing={refreshScope === "games"}
               onRefresh={() => refreshAssessment("games")}
@@ -542,7 +660,7 @@ export function AssessmentShell({
                     className="h-10 rounded-full border-border bg-foreground/[0.03] px-4 text-[0.77rem] tracking-[0.12em] text-foreground uppercase hover:bg-foreground/[0.06]"
                   >
                     {showAllGames
-                      ? `Show high-risk only (${assessment.highRiskGames.length})`
+                      ? `Show flagged only (${assessment.highRiskGames.length})`
                       : `Show all scored games (${assessment.scoredGames.length})`}
                   </Button>
                 ) : undefined
@@ -551,7 +669,7 @@ export function AssessmentShell({
             {showAllGames && assessment.scoredGames.length ? (
               <p className="text-sm text-muted-foreground">
                 Showing every scored public favorite or created game, including
-                titles below the high-risk cutoff.
+                titles below the {surfacedRiskThreshold}% review threshold.
               </p>
             ) : null}
             {visibleGames.length ? (
@@ -569,9 +687,9 @@ export function AssessmentShell({
               </div>
             ) : assessment.scoredGames.length ? (
               <p className="text-sm text-muted-foreground">
-                No public favorite or created games crossed the high-risk
-                threshold. Use Show all scored games to inspect the lower-score
-                matches.
+                No public favorite or created games crossed the{" "}
+                {surfacedRiskThreshold}% review threshold. Use Show all scored
+                games to inspect the lower-score matches.
               </p>
             ) : (
               <p className="text-sm text-muted-foreground">
@@ -587,19 +705,37 @@ export function AssessmentShell({
             <Button
               type="button"
               size="lg"
-              onClick={downloadReport}
+              onClick={openReportPreview}
               className="h-12 min-w-[18rem] rounded-[1rem] bg-primary text-primary-foreground shadow-[0_18px_40px_rgba(0,0,0,0.12)] transition-all duration-300 ease-out hover:scale-[1.01] hover:bg-primary/92"
             >
-              <Download className="size-4" />
-              Download Report
+              <FileText className="size-4" />
+              Preview PDF Report
             </Button>
           </div>
         </div>
       </div>
 
+      <ReportPreviewDialog
+        downloadUrl={reportDownloadUrl}
+        open={isReportPreviewOpen}
+        onOpenChange={(open) => {
+          setIsReportPreviewOpen(open);
+          if (!open) {
+            setIsReportPreviewLoading(false);
+          }
+        }}
+        onPreviewLoaded={() => {
+          setIsReportPreviewLoading(false);
+        }}
+        previewLoading={isReportPreviewLoading}
+        previewUrl={reportPreviewUrl}
+        username={assessment.profile.name}
+      />
+
       <RiskDetailDialog
         entity={dialogSelection}
         open={Boolean(dialogSelection)}
+        gemmaWideWebConfigured={gemmaWideWebConfigured}
         onRefreshWideWeb={
           dialogSelection?.kind === "game"
             ? () => {
@@ -612,6 +748,12 @@ export function AssessmentShell({
             setDialogSelection(null);
           }
         }}
+        wideWebLiveSearchStage={
+          dialogSelection?.kind === "game" &&
+          loadingGameDetailId === dialogSelection.item.placeId
+            ? wideWebLiveSearchStage
+            : null
+        }
         wideWebRefreshPending={
           dialogSelection?.kind === "game" &&
           loadingGameDetailId === dialogSelection.item.placeId

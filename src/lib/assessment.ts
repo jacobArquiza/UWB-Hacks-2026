@@ -1,6 +1,12 @@
+import {
+  surfacedFriendLimit,
+  surfacedGameLimit,
+  surfacedRiskThreshold,
+} from "@/lib/assessment-thresholds";
 import { clampScore, getRiskLevel } from "@/lib/risk";
 import { getExternalCommunityScan, getWideWebRiskScan } from "@/lib/game-sentiment";
 import {
+  getRobloxFriendIds,
   getRobloxGameByPlaceId,
   getRobloxFriends,
   getRobloxGamesForUser,
@@ -18,9 +24,6 @@ import type {
   WideWebSearchMode,
 } from "@/lib/types";
 
-const phase0FriendThreshold = 63;
-const previewGameThreshold = 60;
-
 type WeightedGameSignalSpec = {
   label: string;
   pattern: RegExp;
@@ -30,6 +33,20 @@ type WeightedGameSignalSpec = {
 
 type BuildGameScoringOptions = {
   wideWebSearchMode?: WideWebSearchMode;
+  onWideWebStage?: (stage: "tavily" | "gemma") => void;
+};
+
+type WeightedFriendSignalSpec = {
+  label: string;
+  pattern: RegExp;
+  weight: number;
+};
+
+type FriendGraphContext = {
+  ownerUserId: number;
+  ownerFriendIds: number[];
+  sampledFriendIds: number[];
+  friendIdsByUserId: Map<number, number[]>;
 };
 
 const gameKeywordSignalSpecs = [
@@ -62,6 +79,34 @@ const gameGenreSignalSpecs = [
   { label: "life", pattern: /\blife\b/i, source: "genre", weight: 6 },
 ] satisfies WeightedGameSignalSpec[];
 
+const friendLanguageSignalSpecs = [
+  { label: "discord", pattern: /\bdiscord\b/i, weight: 42 },
+  { label: "snapchat", pattern: /\bsnap(chat)?\b/i, weight: 40 },
+  { label: "telegram", pattern: /\btelegram\b/i, weight: 36 },
+  { label: "dating", pattern: /\bdating\b|\bdate\b/i, weight: 34 },
+  {
+    label: "direct messages",
+    pattern: /\bdm me\b|\bdms open\b|\bmessage me\b|\bpm me\b/i,
+    weight: 32,
+  },
+  { label: "single", pattern: /\bsingle\b/i, weight: 28 },
+  { label: "instagram", pattern: /\binstagram\b|\binsta\b/i, weight: 28 },
+  { label: "boyfriend", pattern: /\bboyfriend\b/i, weight: 26 },
+  { label: "girlfriend", pattern: /\bgirlfriend\b/i, weight: 26 },
+  { label: "daddy", pattern: /\bdaddy\b/i, weight: 24 },
+  { label: "mommy", pattern: /\bmommy\b/i, weight: 24 },
+  { label: "babe", pattern: /\bbabe\b/i, weight: 22 },
+  { label: "lover", pattern: /\blover\b/i, weight: 22 },
+  {
+    label: "contact seeking",
+    pattern: /\badd me\b|\btext me\b|\bcall me\b|\blooking for\b/i,
+    weight: 20,
+  },
+  { label: "voice chat", pattern: /\bvoice\s?chat\b|\bvc\b/i, weight: 18 },
+  { label: "tiktok", pattern: /\btiktok\b/i, weight: 16 },
+  { label: "hot", pattern: /\bhot\b/i, weight: 14 },
+] satisfies WeightedFriendSignalSpec[];
+
 function roundContribution(score: number) {
   return Math.round(score * 10) / 10;
 }
@@ -76,6 +121,17 @@ function collectWeightedGameSignals(
 ) {
   if (!input.trim()) {
     return [] as WeightedGameSignalSpec[];
+  }
+
+  return specs.filter((spec) => spec.pattern.test(input));
+}
+
+function collectWeightedFriendSignals(
+  input: string,
+  specs: WeightedFriendSignalSpec[],
+) {
+  if (!input.trim()) {
+    return [] as WeightedFriendSignalSpec[];
   }
 
   return specs.filter((spec) => spec.pattern.test(input));
@@ -150,6 +206,24 @@ function formatExternalCommunityMatches(
   );
 }
 
+function formatWideWebMatchSignals(
+  matches: Array<{ source: string; title: string; summary: string }>,
+) {
+  return matches.flatMap((match) => {
+    const [tavilySummary, gemmaSummary] = match.summary.split("; Gemma confirmed ");
+    const signals = [
+      `Tavily Source: ${match.title} (${match.source})`,
+      `Tavily Match: ${tavilySummary}`,
+    ];
+
+    if (gemmaSummary) {
+      signals.push(`Gemma 4 Analysis: Gemma confirmed ${gemmaSummary}`);
+    }
+
+    return signals;
+  });
+}
+
 function formatExternalCommunitySources(
   matches: Array<{ label: string; title: string; url: string }>,
 ) {
@@ -172,36 +246,153 @@ function formatExternalCommunitySources(
     });
 }
 
-function hashScore(value: string) {
-  let hash = 0;
-
-  for (const character of value) {
-    hash = (hash * 31 + character.charCodeAt(0)) % 101;
+function getFriendAgeRisk(accountAgeDays: number) {
+  if (accountAgeDays < 7) {
+    return 92;
   }
 
-  return hash;
+  if (accountAgeDays < 30) {
+    return 76;
+  }
+
+  if (accountAgeDays < 180) {
+    return 42;
+  }
+
+  return 12;
 }
 
-function buildFriendFactors(friend: RobloxUserProfile) {
-  const nameSignature = `${friend.name} ${friend.displayName}`;
-  const flaggedTerms =
-    nameSignature.match(
-      /\b(daddy|mommy|uncle|single|babe|queen|king|date|lover|hot)\b/gi,
-    ) ?? [];
+function evaluateFriendGraphRisk(
+  friend: RobloxUserProfile,
+  context?: FriendGraphContext,
+) {
+  if (!context) {
+    return {
+      available: false,
+      mutualCount: 0,
+      sampledMutualCount: 0,
+      risk: 0,
+    };
+  }
+
+  const friendIds = context.friendIdsByUserId.get(friend.id);
+
+  if (!friendIds) {
+    return {
+      available: false,
+      mutualCount: 0,
+      sampledMutualCount: 0,
+      risk: 0,
+    };
+  }
+
+  const ownerFriendIds = new Set(context.ownerFriendIds);
+  const sampledFriendIds = new Set(context.sampledFriendIds);
+
+  let mutualCount = 0;
+  let sampledMutualCount = 0;
+
+  for (const candidateId of friendIds) {
+    if (
+      candidateId !== context.ownerUserId &&
+      candidateId !== friend.id &&
+      ownerFriendIds.has(candidateId)
+    ) {
+      mutualCount += 1;
+    }
+
+    if (candidateId !== friend.id && sampledFriendIds.has(candidateId)) {
+      sampledMutualCount += 1;
+    }
+  }
+
+  let risk =
+    mutualCount >= 8
+      ? 8
+      : mutualCount >= 4
+        ? 22
+        : mutualCount >= 2
+          ? 40
+          : mutualCount === 1
+            ? 58
+            : 78;
+
+  if (sampledMutualCount >= 3) {
+    risk = Math.max(8, risk - 12);
+  } else if (sampledMutualCount === 0 && mutualCount === 0) {
+    risk = 84;
+  }
+
+  return {
+    available: true,
+    mutualCount,
+    sampledMutualCount,
+    risk,
+  };
+}
+
+function getFriendVelocityRisk(
+  friend: RobloxUserProfile,
+  graphRisk: ReturnType<typeof evaluateFriendGraphRisk>,
+) {
+  const friendsPerDay = friend.friendCount / Math.max(friend.accountAgeDays, 1);
+  let risk =
+    friend.accountAgeDays < 14 && friend.friendCount >= 120
+      ? 88
+      : friendsPerDay >= 8
+        ? 78
+        : friendsPerDay >= 4
+          ? 58
+          : friendsPerDay >= 1.5
+            ? 34
+            : 10;
+
+  if (
+    graphRisk.available &&
+    graphRisk.mutualCount === 0 &&
+    friendsPerDay >= 4
+  ) {
+    risk = Math.min(100, risk + 12);
+  }
+
+  return {
+    friendsPerDay,
+    risk,
+  };
+}
+
+function buildFriendFactors(
+  friend: RobloxUserProfile,
+  context?: FriendGraphContext,
+) {
+  const languageInput = `${friend.name} ${friend.displayName} ${friend.description}`;
+  const languageMatches = collectWeightedFriendSignals(
+    languageInput,
+    friendLanguageSignalSpecs,
+  );
   const throwawayPattern = /[0-9]{4,}$|[a-z]{3,}[0-9]{3,}/i.test(friend.name);
-  const youthRisk = friend.accountAgeDays < 7 ? 94 : friend.accountAgeDays < 30 ? 82 : friend.accountAgeDays < 180 ? 54 : 18;
-  const namingRisk = flaggedTerms.length
-    ? 78
-    : throwawayPattern
-      ? 64
-      : 22;
-  const socialVelocityRisk = 30 + (hashScore(friend.name) % 47);
-  const accountAgeContribution = roundContribution(youthRisk * 0.46);
-  const usernamePatternContribution = roundContribution(namingRisk * 0.34);
-  const socialVelocityContribution = roundContribution(socialVelocityRisk * 0.2);
+  const ageRisk = getFriendAgeRisk(friend.accountAgeDays);
+  const languageRisk = Math.min(
+    100,
+    sumScores([
+      ...languageMatches.map((signal) => signal.weight),
+      ...(throwawayPattern ? [18] : []),
+    ]),
+  );
+  const graphRisk = evaluateFriendGraphRisk(friend, context);
+  const velocityRisk = getFriendVelocityRisk(friend, graphRisk);
+  const accountAgeContribution = roundContribution(ageRisk * 0.28);
+  const profileLanguageContribution = roundContribution(languageRisk * 0.22);
+  const graphOverlapContribution = graphRisk.available
+    ? roundContribution(graphRisk.risk * 0.3)
+    : 0;
+  const graphVelocityContribution = roundContribution(velocityRisk.risk * 0.2);
 
   const score = clampScore(
-    youthRisk * 0.46 + namingRisk * 0.34 + socialVelocityRisk * 0.2,
+    ageRisk * 0.28 +
+      languageRisk * 0.22 +
+      (graphRisk.available ? graphRisk.risk * 0.3 : 0) +
+      velocityRisk.risk * 0.2,
   );
 
   const factors = [
@@ -211,65 +402,91 @@ function buildFriendFactors(friend: RobloxUserProfile) {
       value: `${friend.accountAgeDays} days`,
       active: true,
       contribution: accountAgeContribution,
-      observedSignals: [describeFriendAgeBand(friend.accountAgeDays)],
-      note:
-        friend.accountAgeDays < 30
-          ? "Very new profiles are treated as higher-risk preview candidates."
-          : "Older accounts receive less preview weight.",
-    },
-    {
-      key: "username-pattern",
-      label: "Username pattern",
-      value: flaggedTerms.length
-        ? flaggedTerms.join(", ")
-        : throwawayPattern
-          ? "throwaway-style suffix"
-          : "no obvious flag",
-      active: true,
-      contribution: usernamePatternContribution,
-      observedSignals: flaggedTerms.length
-        ? flaggedTerms.map((term) => `Matched term: ${term.toLowerCase()}`)
-        : throwawayPattern
-          ? [
-              "Matched throwaway-style name pattern",
-              "Regex family: [0-9]{4,}$ or [a-z]{3,}[0-9]{3,}",
-            ]
-          : [],
-      note:
-        flaggedTerms.length || throwawayPattern
-          ? "Phase 0 flags names that look disposable or adult-coded."
-          : "No suspicious naming signal triggered.",
-    },
-    {
-      key: "social-velocity",
-      label: "Preview social velocity score",
-      value: `${socialVelocityRisk}%`,
-      active: true,
-      contribution: socialVelocityContribution,
       observedSignals: [
-        `Preview placeholder output: ${socialVelocityRisk}`,
-        "This is still a deterministic Phase 0 stand-in for graph scoring.",
+        describeFriendAgeBand(friend.accountAgeDays),
+        `Friend count: ${friend.friendCount}`,
       ],
       note:
-        "Temporary Phase 0 weighting that keeps the UI navigable until live graph scoring ships in P1.",
+        friend.accountAgeDays < 30
+          ? "Very new profiles still carry more weight because they are easier to create and discard."
+          : "Older accounts receive less risk from account age alone.",
     },
     {
-      key: "external-signals",
-      label: "External web signals",
-      value: "disabled",
-      active: false,
-      contribution: 0,
-      observedSignals: [],
+      key: "profile-language",
+      label: "Profile language scan",
+      value: languageMatches.length || throwawayPattern
+        ? `${languageMatches.length + (throwawayPattern ? 1 : 0)} matched signal${
+            languageMatches.length + (throwawayPattern ? 1 : 0) === 1
+              ? ""
+              : "s"
+          }`
+        : "No strong match",
+      active: true,
+      contribution: profileLanguageContribution,
+      observedSignals: [
+        ...languageMatches.map(
+          (signal) => `Matched profile signal: ${signal.label} (+${signal.weight})`,
+        ),
+        ...(throwawayPattern
+          ? [
+              "Matched throwaway-style username suffix (+18)",
+              "Regex family: [0-9]{4,}$ or [a-z]{3,}[0-9]{3,}",
+            ]
+          : []),
+      ],
       note:
-        "Reddit, DevForum, and video safety checks are intentionally inactive in this build.",
+        languageMatches.length || throwawayPattern
+          ? "Friend bios and handles are scanned for off-platform contact terms, dating language, and disposable-name patterns."
+          : "No strong profile language or naming signal triggered.",
+    },
+    {
+      key: "mutual-friend-overlap",
+      label: "Mutual friend overlap",
+      value: graphRisk.available
+        ? `${graphRisk.mutualCount} mutual friend${
+            graphRisk.mutualCount === 1 ? "" : "s"
+          }`
+        : "unavailable",
+      active: graphRisk.available,
+      contribution: graphOverlapContribution,
+      observedSignals: graphRisk.available
+        ? [
+            `Mutual friends with the profiled account: ${graphRisk.mutualCount}`,
+            `Overlap with sampled peer set: ${graphRisk.sampledMutualCount}`,
+          ]
+        : [],
+      note: graphRisk.available
+        ? "Friends with little overlap into the profiled user's existing network are treated as riskier than friends who are embedded in the same public graph."
+        : "Public friend-list overlap was unavailable for this friend, so this factor stayed neutral.",
+    },
+    {
+      key: "friend-graph-velocity",
+      label: "Friend graph velocity",
+      value: `${velocityRisk.friendsPerDay.toFixed(1)} friends/day`,
+      active: true,
+      contribution: graphVelocityContribution,
+      observedSignals: [
+        `Friend count: ${friend.friendCount}`,
+        `Growth rate: ${velocityRisk.friendsPerDay.toFixed(2)} friends/day`,
+        ...(graphRisk.available &&
+        graphRisk.mutualCount === 0 &&
+        velocityRisk.friendsPerDay >= 4
+          ? ["Rapid friend growth with zero mutual overlap"]
+          : []),
+      ],
+      note:
+        "Fast friend accumulation on a very young or socially isolated account is treated as a stronger graph anomaly than friend count alone.",
     },
   ] satisfies RiskFactor[];
 
   return { factors, score };
 }
 
-export function buildPreviewFriendSummary(friend: RobloxUserProfile) {
-  const { factors, score } = buildFriendFactors(friend);
+export function buildPreviewFriendSummary(
+  friend: RobloxUserProfile,
+  context?: FriendGraphContext,
+) {
+  const { factors, score } = buildFriendFactors(friend, context);
 
   return {
     id: friend.id,
@@ -317,6 +534,7 @@ async function buildGameFactors(
     ? await getWideWebRiskScan(game, {
         allowLiveSearch: allowWideWebLiveSearch,
         forceRefresh: wideWebSearchMode === "force-refresh",
+        onStage: options.onWideWebStage,
       })
     : {
         attempted: false,
@@ -494,7 +712,7 @@ async function buildGameFactors(
                   : "No source responded"
               }`,
               ...(wideWebScan.matches.length
-                ? formatExternalCommunityMatches(wideWebScan.matches.slice(0, 4))
+                ? formatWideWebMatchSignals(wideWebScan.matches.slice(0, 4))
                 : ["No wider web result produced a strong safety-risk match."]),
             ]
           : wideWebSearchMode === "cache-only"
@@ -565,18 +783,36 @@ export async function buildPreviewGameSummary(
 
 export async function buildPreviewAssessment(username: string) {
   const profile = await getRobloxUserByUsername(username);
-  const [friendProfiles, publicGames] = await Promise.all([
+  const [friendProfiles, publicGames, ownerFriendIds] = await Promise.all([
     getRobloxFriends(profile.id),
     getRobloxGamesForUser(profile.id),
+    getRobloxFriendIds(profile.id),
   ]);
+  const sampledFriendIds = friendProfiles.map((friend) => friend.id);
+  const friendIdLookups = await Promise.allSettled(
+    sampledFriendIds.map(async (friendId) => {
+      return [friendId, await getRobloxFriendIds(friendId)] as const;
+    }),
+  );
+  const friendIdsByUserId = new Map<number, number[]>(
+    friendIdLookups.flatMap((result) =>
+      result.status === "fulfilled" ? [result.value] : [],
+    ),
+  );
+  const friendGraphContext = {
+    ownerUserId: profile.id,
+    ownerFriendIds: ownerFriendIds.length ? ownerFriendIds : sampledFriendIds,
+    sampledFriendIds,
+    friendIdsByUserId,
+  } satisfies FriendGraphContext;
 
   const allFriendSummaries = friendProfiles
-    .map((friend) => buildPreviewFriendSummary(friend))
+    .map((friend) => buildPreviewFriendSummary(friend, friendGraphContext))
     .sort((left, right) => right.score - left.score);
 
   const friendSummaries = allFriendSummaries
-    .filter((friend) => friend.score >= phase0FriendThreshold)
-    .slice(0, 8);
+    .filter((friend) => friend.score >= surfacedRiskThreshold)
+    .slice(0, surfacedFriendLimit);
 
   const scoredGames = (
     await Promise.all(publicGames.map((game) => buildPreviewGameSummary(game)))
@@ -584,8 +820,8 @@ export async function buildPreviewAssessment(username: string) {
     .sort((left, right) => right.score - left.score);
 
   const gameSummaries = scoredGames
-    .filter((game) => game.score >= previewGameThreshold)
-    .slice(0, 6);
+    .filter((game) => game.score >= surfacedRiskThreshold)
+    .slice(0, surfacedGameLimit);
 
   const overallCandidateScores = [
     ...allFriendSummaries.map((friend) => friend.score),
@@ -603,13 +839,13 @@ export async function buildPreviewAssessment(username: string) {
     overallRiskScore,
     overallRiskLevel: getRiskLevel(overallRiskScore),
     summary:
-      "Phase 0 preview using live Roblox identity data, live friend lookups, public Roblox game associations, and lightweight external Reddit and DevForum corroboration.",
+      "Phase 0 preview using live Roblox identity data, first-pass public friend graph analysis, public Roblox game associations, and lightweight external Reddit and DevForum corroboration.",
     mode: "phase0-preview",
     lastAssessed: timestamp,
     friendsLastAssessed: timestamp,
     gamesLastAssessed: timestamp,
     notes: [
-      "This build is honest about its limits: the risk UI is real, but the deeper friend and game classifiers are still staged for later phases.",
+      "Friend scoring now uses public account age, profile language, mutual-overlap, and friend-growth signals instead of the old placeholder velocity hash.",
       "Game checks now evaluate the user's public favorite games and public created experiences when Roblox exposes them.",
       "Live game scoring now includes Reddit and DevForum corroboration. Tavily-backed wide web search is available on direct game detail refresh when configured, but not in bulk profile refresh yet.",
       "Saved children sync to your account when Supabase persistence is configured; otherwise they fall back to this browser.",
@@ -617,6 +853,7 @@ export async function buildPreviewAssessment(username: string) {
     ],
     highRiskFriends: friendSummaries,
     highRiskGames: gameSummaries,
+    scoredFriends: allFriendSummaries,
     scoredGames,
   } satisfies UserAssessment;
 }
@@ -633,5 +870,6 @@ export async function buildPreviewGameById(
   const game = await getRobloxGameByPlaceId(gameId);
   return await buildPreviewGameSummary(game, {
     wideWebSearchMode: options.wideWebSearchMode ?? "prefer-cache",
+    onWideWebStage: options.onWideWebStage,
   });
 }

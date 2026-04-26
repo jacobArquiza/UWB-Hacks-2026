@@ -100,6 +100,7 @@ export interface UserAssessment {
   notes: string[];
   highRiskFriends: FriendRiskSummary[];
   highRiskGames: GameRiskSummary[];
+  scoredFriends: FriendRiskSummary[];
   scoredGames: GameRiskSummary[];
 }
 

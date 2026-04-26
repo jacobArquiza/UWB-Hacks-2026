@@ -8,13 +8,14 @@ This document describes the current Phase 0 game-risk scoring used by RoRadar.
 - Private recent-play history is not available to this build.
 - Reddit and DevForum corroboration are now part of the live scorer.
 - An optional Tavily-backed wide web scan can run on direct game detail refresh.
+- When `GEMINI_API_KEY` is configured, Gemma 4 validates those wide-web results before they count.
 - YouTube discussion checks are still not integrated.
 
 ## Output
 
 - Every scored game receives a `0-100` risk score.
 - Scores are rounded and clamped into that range.
-- The default `High-Risk Games` shelf still surfaces games at `60+`.
+- The default `Flagged Games` shelf surfaces games at `35+`.
 - `Show all scored games` reveals lower-scoring public matches as well.
 
 ## Formula
@@ -168,9 +169,10 @@ The reason for that rollout is pragmatic:
 The Tavily pass is still conservative:
 
 - it excludes surfaces already handled separately, such as Reddit, DevForum, and Roblox itself
-- it requires the game title to still appear relevant in the result
 - it runs a second context pass before a result contributes anything
 - a result can count from strong safety-report context alone, even if it does not repeat the game's own social keywords
+
+When Gemma 4 is configured, it then validates whether a candidate page is really about the exact target game instead of Roblox generally. That extra pass is especially useful for generic titles where raw keyword overlap can overcount.
 
 ## 6. Not yet integrated
 

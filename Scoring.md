@@ -32,8 +32,9 @@ Those principles are what make the rubric logical. The system is trying to order
 
 - live Roblox user lookup
 - account age
-- username / display-name pattern checks
-- a temporary deterministic social-velocity placeholder
+- profile language and username pattern checks
+- public friend-graph overlap
+- friend-count growth rate
 
 ### Game scoring uses
 
@@ -47,13 +48,14 @@ Those principles are what make the rubric logical. The system is trying to order
 - Reddit corroboration scans
 - DevForum corroboration scans
 - optional Tavily-backed wide web scans on direct game detail refresh
+- optional Gemma 4 validation of wide web results before they count
 
 ### Not yet integrated into live scoring
 
 - private recent-play history
 - Roblox chat logs
 - YouTube checks
-- live friend-graph anomaly analysis
+- richer friend-interaction or recency analysis
 - deeper creator / moderation history signals
 
 So the system is only scoring what it can actually see.
@@ -64,8 +66,8 @@ The app uses the same label thresholds everywhere:
 
 - `80+` -> `High risk`
 - `63-79` -> `Needs review`
-- `36-62` -> `Watch list`
-- `0-35` -> `Low concern`
+- `35-62` -> `Watch list`
+- `0-34` -> `Low concern`
 
 These are presentation bands, not probability claims.
 
@@ -78,9 +80,10 @@ Each friend gets a `0-100` score.
 ```text
 friend_score =
   clamp(
-    (account_age_risk * 0.46) +
-    (username_pattern_risk * 0.34) +
-    (social_velocity_risk * 0.20)
+    (account_age_risk * 0.28) +
+    (profile_language_risk * 0.22) +
+    (mutual_friend_overlap_risk * 0.30) +
+    (friend_graph_velocity_risk * 0.20)
   )
 ```
 
@@ -90,10 +93,10 @@ friend_score =
 
 Banding:
 
-- `< 7 days` -> `94`
-- `< 30 days` -> `82`
-- `< 180 days` -> `54`
-- `180+ days` -> `18`
+- `< 7 days` -> `92`
+- `< 30 days` -> `76`
+- `< 180 days` -> `42`
+- `180+ days` -> `12`
 
 Why this is logical:
 
@@ -106,57 +109,74 @@ Why it gets the highest weight:
 - it is harder to fake than presentation-style signals
 - it maps to account disposability, which is relevant for safety triage
 
-### 2. Username pattern risk
+### 2. Profile language risk
 
-The system looks for two classes of signals:
+The system scans the username, display name, and public description for stronger
+signals such as:
 
-- adult-coded or grooming-adjacent words such as:
+- off-platform contact handoff:
+  - `discord`
+  - `snapchat`
+  - `telegram`
+  - `instagram`
+- solicitation or dating framing:
+  - `dm me`
+  - `message me`
+  - `single`
+  - `dating`
+  - `boyfriend`
+  - `girlfriend`
+- more adult-coded presentation terms:
   - `daddy`
   - `mommy`
-  - `uncle`
-  - `single`
   - `babe`
-  - `queen`
-  - `king`
-  - `date`
   - `lover`
-  - `hot`
-- throwaway-style naming patterns such as:
-  - long numeric suffixes
-  - alpha-plus-digits constructions
 
-Banding:
-
-- flagged terms present -> `78`
-- throwaway-style pattern only -> `64`
-- no obvious flag -> `22`
+It also still adds a small penalty for throwaway-style username patterns such as
+long numeric suffixes.
 
 Why this is logical:
 
-- names are weak evidence, so they should not dominate the score
-- names can still expose disposable behavior or age-inappropriate presentation
-- that makes them a reasonable secondary factor, not a verdict
+- profile text is still weaker than platform facts, so it is not the biggest weight
+- off-platform contact language is more meaningful than vague words like `king`
+- weak naming evidence still counts, but only modestly
 
-### 3. Social velocity placeholder
+### 3. Mutual friend overlap risk
 
-Current formula:
+The system asks a graph question:
+
+- does this friend appear embedded in the profiled user's wider public friend network?
+
+It looks at:
+
+- how many of the profiled user's other public friends also appear in this
+  friend's public friend list
+- how much overlap exists within the sampled friend set shown in the assessment
+
+Why this is logical:
+
+- friends with no visible overlap into the rest of the network are less anchored
+- friends who are embedded across multiple public connections look less isolated
+- this is a real graph signal, not a cosmetic heuristic
+
+### 4. Friend graph velocity
+
+The system computes:
 
 ```text
-social_velocity_risk = 30 + (hash(friend.name) % 47)
+friends_per_day = friend_count / max(account_age_days, 1)
 ```
 
-This yields a deterministic Phase 0 placeholder between `30` and `76`.
+Then it raises risk more for:
 
-Why it exists:
+- very young accounts with unusually large friend counts
+- fast friend growth combined with zero visible mutual overlap
 
-- the real graph-based friend scoring is not yet integrated
-- the UI still needs a stable third factor so sorting and review flows work
+Why this is logical:
 
-Why this is the weakest part of the current model:
-
-- it is not a true behavioral signal
-- it is scaffolding, not a mature classifier
-- it is weighted lower than account age and username patterns for exactly that reason
+- raw friend count by itself is weak
+- fast friend accumulation on a new or isolated account is more meaningful
+- this is closer to an actual behavioral anomaly than the old placeholder
 
 ## Game scoring
 
@@ -310,6 +330,8 @@ Why this is logical:
 
 When Tavily is configured, direct game detail refreshes can run a wider article and forum search beyond Reddit and DevForum.
 
+When `GEMINI_API_KEY` is also configured, Gemma 4 runs as a second-pass classifier on those Tavily results.
+
 Important rollout boundary:
 
 - this currently runs only on direct game detail refresh
@@ -325,9 +347,21 @@ Why this rollout is logical:
 The Tavily pass stays conservative:
 
 - it excludes Roblox, Reddit, DevForum, and YouTube because those are either already scored or intentionally deferred
-- it still requires the game title to remain relevant in the result text
 - it still runs the same context pass before a result contributes risk
 - strong safety-report context can count even when the article does not repeat the game's social keywords
+
+The Gemma pass then makes one narrower judgment:
+
+- is this result really about this exact game, or is it only about Roblox generally?
+
+That matters most for generic titles such as `Voice Chat Hangout`, where keyword overlap alone can be misleading.
+
+Why this is logical:
+
+- Tavily is good at finding candidate pages
+- regex rules are good at finding suspicious language
+- Gemma is better at deciding whether the page is actually about the exact game instead of a broader Roblox issue
+- cached Gemma-validated results can then be reused without spending new model calls
 
 ## Game factors that currently explain provenance rather than add score
 
@@ -353,15 +387,16 @@ Live game scoring still does not include:
 
 ### Friends
 
-- friend cards shown on the page are filtered to `63+`
+- the default `Flagged Friends` shelf shows friends at `35+`
 - then sorted descending
 - then limited to the top `8`
+- `Show all scored friends` reveals the full scored public friend list, including lower-score profiles
 
 ### Games
 
-- the default `High-Risk Games` shelf shows games at `60+`
+- the default `Flagged Games` shelf shows games at `35+`
 - the list is sorted descending
-- the default high-risk shelf is capped at `6`
+- the default flagged shelf is capped at `6`
 - `Show all scored games` reveals the full scored public list, including lower-risk items
 
 Why this is logical:
@@ -416,9 +451,9 @@ The current model still has real constraints.
 
 ### Friend-model limitations
 
-- the social-velocity factor is still placeholder logic
-- there is no true friend-graph anomaly model yet
-- external corroboration is still disabled
+- the model still only sees public Roblox graph data, not recent interactions
+- private chat or message behavior is still unavailable
+- external corroboration for friends is still disabled
 
 ### Game-model limitations
 
