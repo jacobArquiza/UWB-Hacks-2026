@@ -1,3 +1,4 @@
+import Image from "next/image";
 import Link from "next/link";
 
 import { SiteSettingsDialog } from "@/components/site-settings-dialog";
@@ -24,11 +25,16 @@ export function SiteNav({
           <div className="grid min-h-[4.9rem] grid-cols-[minmax(0,1fr)_auto_minmax(0,1fr)] items-center gap-3 px-5 sm:px-7 lg:px-8">
             <Link
               href="/"
-              className="flex min-w-0 items-center justify-self-start transition-opacity hover:opacity-80"
+              className="flex min-w-0 items-center justify-self-start px-1 transition-opacity hover:opacity-80"
             >
-              <span className="flex h-11 min-w-[11rem] items-center justify-center rounded-[1rem] bg-foreground px-6 font-heading text-[0.96rem] font-medium text-background sm:min-w-[14rem] lg:min-w-[18rem]">
-                RoRadar
-              </span>
+              <Image
+                src="/branding/roradar-wordmark.png"
+                alt="RoRadar"
+                width={1092}
+                height={306}
+                priority
+                className="h-7 w-auto sm:h-8"
+              />
             </Link>
 
             <div className="hidden items-center gap-1 justify-self-center md:flex">
