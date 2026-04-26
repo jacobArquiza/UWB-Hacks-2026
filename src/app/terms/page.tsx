@@ -56,12 +56,6 @@ const sections = [
       "RoRadar may modify or discontinue features, integrations, or report formats at any time. These Terms may also be updated from time to time. Continued use of the service after an update constitutes acceptance of the revised Terms.",
     ],
   },
-  {
-    title: "Contact",
-    body: [
-      "Questions about these Terms of Use can be directed to support@roradar.app.",
-    ],
-  },
 ] as const;
 
 export default function TermsPage() {

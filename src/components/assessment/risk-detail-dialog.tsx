@@ -46,7 +46,7 @@ function MetaRow({
       <p className="text-[0.68rem] tracking-[0.18em] text-muted-foreground uppercase">
         {label}
       </p>
-      <p className="text-sm leading-6 text-foreground/80">{value}</p>
+      <p className="break-words text-sm leading-6 text-foreground/80">{value}</p>
     </div>
   );
 }
@@ -122,8 +122,10 @@ function FactorRow({
       <CardContent className="grid gap-3 p-4 sm:grid-cols-[minmax(0,1fr)_minmax(8.5rem,auto)_minmax(7rem,auto)] sm:items-start sm:gap-x-5">
         <div className="min-w-0">
           <div className="flex flex-wrap items-center justify-between gap-3">
-            <div className="flex items-center gap-2">
-              <p className="text-sm font-medium text-foreground">{factor.label}</p>
+            <div className="flex min-w-0 items-center gap-2">
+              <p className="break-words text-sm font-medium text-foreground">
+                {factor.label}
+              </p>
               <FactorNote label={factor.label} note={factor.note} />
             </div>
             {isWideWebFactor && onRefreshWideWeb ? (
@@ -197,7 +199,7 @@ function FactorRow({
             </div>
           ) : null}
           {factor.observedSignals?.length ? (
-            <ul className="mt-2 grid gap-1.5 pl-5 text-sm leading-6 text-muted-foreground list-disc">
+            <ul className="mt-2 grid gap-1.5 break-words pl-5 text-sm leading-6 text-muted-foreground list-disc">
               {factor.observedSignals.map((signal) => (
                 <li key={signal}>{signal}</li>
               ))}
@@ -208,7 +210,7 @@ function FactorRow({
               <p className="text-[0.68rem] tracking-[0.18em] text-muted-foreground uppercase">
                 Source pages
               </p>
-              <ul className="mt-2 grid gap-1.5 pl-5 text-sm leading-6 text-muted-foreground list-disc">
+              <ul className="mt-2 grid gap-1.5 break-words pl-5 text-sm leading-6 text-muted-foreground list-disc">
                 {factor.observedSources.map((source) => (
                   <li key={`${source.label}-${source.url}`}>
                     <a
@@ -230,7 +232,7 @@ function FactorRow({
           <p className="text-[0.68rem] tracking-[0.18em] text-muted-foreground uppercase">
             Observed value
           </p>
-          <p className="mt-1 text-sm leading-6 text-foreground/80">
+          <p className="mt-1 break-words text-sm leading-6 text-foreground/80">
             {formatFactorValue(factor.value)}
           </p>
         </div>
@@ -270,12 +272,12 @@ export function RiskDetailDialog({
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent
-        className="w-[calc(100vw-2rem)] max-w-5xl overflow-visible rounded-[1.75rem] border border-border bg-popover/96 p-0 text-popover-foreground shadow-[0_36px_120px_rgba(0,0,0,0.24)] lg:max-w-6xl"
+        className="w-[calc(100vw-1rem)] max-w-5xl max-h-[calc(100dvh-1rem)] overflow-hidden rounded-[1.5rem] border border-border bg-popover/96 p-0 text-popover-foreground shadow-[0_36px_120px_rgba(0,0,0,0.24)] sm:w-[calc(100vw-2rem)] sm:rounded-[1.75rem] lg:max-w-6xl"
         showCloseButton
       >
         {item ? (
-          <div className="max-h-[88dvh] overflow-x-visible overflow-y-auto">
-            <div className="p-5 sm:p-6 lg:p-8">
+          <div className="max-h-[calc(100dvh-1rem)] overflow-x-hidden overflow-y-auto overscroll-contain touch-pan-y">
+            <div className="p-4 sm:p-6 lg:p-8">
               <div className="grid gap-6 lg:grid-cols-[18rem_minmax(0,1fr)] lg:gap-8">
                 <div className="space-y-4">
                   <a
@@ -330,12 +332,12 @@ export function RiskDetailDialog({
                   </a>
                 </div>
 
-                <div className="space-y-6">
+                <div className="min-w-0 space-y-6">
                   <DialogHeader className="gap-3 text-left">
                     <p className="text-[0.72rem] tracking-[0.2em] text-muted-foreground uppercase">
                       {friend ? "Friend detail" : "Game detail"}
                     </p>
-                    <DialogTitle className="font-heading text-[2.1rem] leading-[0.94] font-semibold tracking-[-0.05em] text-foreground sm:text-[2.45rem] lg:text-[2.9rem]">
+                    <DialogTitle className="break-words font-heading text-[2.1rem] leading-[0.94] font-semibold tracking-[-0.05em] text-foreground sm:text-[2.45rem] lg:text-[2.9rem]">
                       {friend ? friend.displayName : game?.name}
                     </DialogTitle>
                     <DialogDescription className="text-base text-muted-foreground">

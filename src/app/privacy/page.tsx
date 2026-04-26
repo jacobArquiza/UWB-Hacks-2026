@@ -57,12 +57,6 @@ const sections = [
       "RoRadar is built as a parent-facing awareness tool and is not intended for unsupervised use by children. The app may process public Roblox information relating to child accounts only to generate parent-readable safety snapshots requested by a parent or guardian.",
     ],
   },
-  {
-    title: "Contact",
-    body: [
-      "Questions about this Privacy Policy can be directed to support@roradar.app.",
-    ],
-  },
 ] as const;
 
 export default function PrivacyPage() {

@@ -41,12 +41,6 @@ export function SiteFooter() {
                 RoRadar is independent and not affiliated with Roblox
                 Corporation.
               </p>
-              <a
-                href="mailto:support@roradar.app"
-                className="text-foreground/72 transition-colors hover:text-foreground"
-              >
-                Contact: support@roradar.app
-              </a>
             </div>
           </div>
         </div>
