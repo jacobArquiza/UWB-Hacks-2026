@@ -61,7 +61,7 @@ Important operational assumption:
   - database schema and cache-table migrations
 - `docs/`
   - public-facing rubric docs
-- `code.md`
+- `pres/code.md`
   - this internal walkthrough
 
 ### `src/app/`
