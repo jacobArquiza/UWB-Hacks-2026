@@ -1,7 +1,7 @@
 "use client";
 
 import Image from "next/image";
-import { useState, useTransition } from "react";
+import { useState, useTransition, type ReactNode } from "react";
 import {
   Download,
   ExternalLink,
@@ -12,6 +12,7 @@ import {
 import { toast } from "sonner";
 
 import { RiskDetailDialog } from "@/components/assessment/risk-detail-dialog";
+import { usePreferences } from "@/components/preferences-provider";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -21,7 +22,9 @@ import { upsertSavedChild } from "@/lib/saved-children";
 import type {
   FriendRiskSummary,
   GameRiskSummary,
+  SavedChildProfile,
   UserAssessment,
+  WideWebSearchMode,
 } from "@/lib/types";
 
 type AssessmentShellProps = {
@@ -41,11 +44,13 @@ function SectionHeader({
   lastAssessed,
   refreshing,
   onRefresh,
+  actions,
 }: {
   title: string;
   lastAssessed: string;
   refreshing: boolean;
   onRefresh: () => void;
+  actions?: ReactNode;
 }) {
   return (
     <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
@@ -53,6 +58,7 @@ function SectionHeader({
         {title}
       </h2>
       <div className="flex flex-wrap items-center gap-3">
+        {actions}
         <Badge
           variant="outline"
           className="h-8 rounded-full border-border bg-foreground/[0.03] px-3.5 text-[0.68rem] tracking-[0.18em] text-muted-foreground uppercase"
@@ -195,11 +201,82 @@ export function AssessmentShell({
   authConfigured,
   isLoggedIn,
 }: AssessmentShellProps) {
+  const { wideWebSearchEnabled } = usePreferences();
   const [assessment, setAssessment] = useState(initialAssessment);
   const [refreshScope, setRefreshScope] = useState<RefreshScope | null>(null);
   const [isSaving, setIsSaving] = useState(false);
   const [dialogSelection, setDialogSelection] = useState<DialogSelection>(null);
+  const [loadingGameDetailId, setLoadingGameDetailId] = useState<number | null>(null);
+  const [showAllGames, setShowAllGames] = useState(false);
   const [, startTransition] = useTransition();
+  const hasAdditionalScoredGames =
+    assessment.scoredGames.length > assessment.highRiskGames.length;
+  const visibleGames = showAllGames
+    ? assessment.scoredGames
+    : assessment.highRiskGames;
+
+  async function refreshGameDetail(
+    game: GameRiskSummary,
+    wideWebSearchMode: WideWebSearchMode,
+  ) {
+    setDialogSelection({ kind: "game", item: game });
+
+    if (loadingGameDetailId === game.placeId) {
+      return;
+    }
+
+    setLoadingGameDetailId(game.placeId);
+
+    try {
+      const response = await fetch(`/api/assessments/games/${game.placeId}/refresh`, {
+        method: "POST",
+        headers: {
+          "content-type": "application/json",
+        },
+        body: JSON.stringify({
+          wideWebSearchMode,
+        }),
+      });
+
+      if (!response.ok) {
+        throw new Error("Could not load expanded game detail.");
+      }
+
+      const payload = (await response.json()) as { game: GameRiskSummary };
+
+      startTransition(() => {
+        setDialogSelection((current) =>
+          current?.kind === "game" && current.item.placeId === payload.game.placeId
+            ? { kind: "game", item: payload.game }
+            : current,
+        );
+        setAssessment((current) => {
+          const nextScoredGames = current.scoredGames
+            .map((entry) =>
+              entry.placeId === payload.game.placeId ? payload.game : entry,
+            )
+            .sort((left, right) => right.score - left.score);
+
+          return {
+            ...current,
+            scoredGames: nextScoredGames,
+            highRiskGames: nextScoredGames
+              .filter((entry) => entry.score >= 60)
+              .slice(0, 6),
+            gamesLastAssessed: payload.game.lastAssessed,
+          };
+        });
+      });
+    } catch (error) {
+      toast.error(
+        error instanceof Error
+          ? error.message
+          : "Game detail refresh failed unexpectedly.",
+      );
+    } finally {
+      setLoadingGameDetailId(null);
+    }
+  }
 
   async function refreshAssessment(scope: RefreshScope) {
     setRefreshScope(scope);
@@ -273,18 +350,18 @@ export function AssessmentShell({
       }
 
       const payload = (await response.json()) as {
-        child: {
-          id: number;
-          name: string;
-          displayName: string;
-          avatarUrl: string;
-          profileUrl: string;
-          savedAt: string;
-        };
+        child: SavedChildProfile;
+        storage: "local" | "supabase";
       };
 
-      upsertSavedChild(payload.child);
-      toast.success("Saved to the Phase 0 dashboard.");
+      if (payload.storage === "local") {
+        upsertSavedChild(payload.child);
+        toast.success(
+          "Saved in this browser. Add SUPABASE_SERVICE_ROLE_KEY to sync across devices.",
+        );
+      } else {
+        toast.success("Saved to your dashboard.");
+      }
     } catch (error) {
       toast.error(
         error instanceof Error ? error.message : "Save failed unexpectedly.",
@@ -298,6 +375,13 @@ export function AssessmentShell({
     window.location.href = `/api/reports/users/${encodeURIComponent(
       assessment.profile.name,
     )}`;
+  }
+
+  async function openGameDetail(game: GameRiskSummary) {
+    await refreshGameDetail(
+      game,
+      wideWebSearchEnabled ? "prefer-cache" : "cache-only",
+    );
   }
 
   return (
@@ -448,19 +532,52 @@ export function AssessmentShell({
               lastAssessed={assessment.gamesLastAssessed}
               refreshing={refreshScope === "games"}
               onRefresh={() => refreshAssessment("games")}
+              actions={
+                hasAdditionalScoredGames ? (
+                  <Button
+                    type="button"
+                    variant="outline"
+                    size="lg"
+                    onClick={() => setShowAllGames((current) => !current)}
+                    className="h-10 rounded-full border-border bg-foreground/[0.03] px-4 text-[0.77rem] tracking-[0.12em] text-foreground uppercase hover:bg-foreground/[0.06]"
+                  >
+                    {showAllGames
+                      ? `Show high-risk only (${assessment.highRiskGames.length})`
+                      : `Show all scored games (${assessment.scoredGames.length})`}
+                  </Button>
+                ) : undefined
+              }
             />
-            <div className="grid grid-cols-[repeat(auto-fill,minmax(15rem,1fr))] gap-6">
-              {assessment.highRiskGames.map((game, index) => (
-                <GameCard
-                  key={game.placeId}
-                  game={game}
-                  index={index}
-                  onSelect={(nextGame) =>
-                    setDialogSelection({ kind: "game", item: nextGame })
-                  }
-                />
-              ))}
-            </div>
+            {showAllGames && assessment.scoredGames.length ? (
+              <p className="text-sm text-muted-foreground">
+                Showing every scored public favorite or created game, including
+                titles below the high-risk cutoff.
+              </p>
+            ) : null}
+            {visibleGames.length ? (
+              <div className="grid grid-cols-[repeat(auto-fill,minmax(15rem,1fr))] gap-6">
+                {visibleGames.map((game, index) => (
+                  <GameCard
+                    key={game.placeId}
+                    game={game}
+                    index={index}
+                    onSelect={(nextGame) => {
+                      void openGameDetail(nextGame);
+                    }}
+                  />
+                ))}
+              </div>
+            ) : assessment.scoredGames.length ? (
+              <p className="text-sm text-muted-foreground">
+                No public favorite or created games crossed the high-risk
+                threshold. Use Show all scored games to inspect the lower-score
+                matches.
+              </p>
+            ) : (
+              <p className="text-sm text-muted-foreground">
+                No public favorite or created games were available to score.
+              </p>
+            )}
           </section>
 
           <div
@@ -483,11 +600,22 @@ export function AssessmentShell({
       <RiskDetailDialog
         entity={dialogSelection}
         open={Boolean(dialogSelection)}
+        onRefreshWideWeb={
+          dialogSelection?.kind === "game"
+            ? () => {
+                void refreshGameDetail(dialogSelection.item, "force-refresh");
+              }
+            : undefined
+        }
         onOpenChange={(open) => {
           if (!open) {
             setDialogSelection(null);
           }
         }}
+        wideWebRefreshPending={
+          dialogSelection?.kind === "game" &&
+          loadingGameDetailId === dialogSelection.item.placeId
+        }
       />
     </>
   );

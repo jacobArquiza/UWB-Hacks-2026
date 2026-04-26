@@ -4,9 +4,9 @@ RoRadar is a parental awareness tool for Roblox safety. Phase 0 focuses on:
 
 - a polished landing page and player-report flow
 - live Roblox profile lookup for `KingRobloxsian20`
-- a seeded live game card for `Grow a Garden`
+- real game discovery from public favorite games and public created experiences
 - real Auth0 wiring for login/logout
-- a Supabase schema scaffold that is ready to take over persistence later
+- account-backed saved-child persistence when Supabase server credentials are configured
 
 ## Run locally
 
@@ -18,8 +18,13 @@ RoRadar is a parental awareness tool for Roblox safety. Phase 0 focuses on:
    Allowed Web Origins: `http://localhost:3000`
 4. Add the real Auth0 values to `.env.local` if you want the login flow to work.
 5. Rebuild or restart the app after changing Auth0 env vars.
-6. Add Supabase URL and anon key when you are ready to connect the project.
-7. Start the app:
+6. Add `NEXT_PUBLIC_SUPABASE_URL`, `NEXT_PUBLIC_SUPABASE_ANON_KEY`, and the
+   server-only `SUPABASE_SERVICE_ROLE_KEY` when you are ready to connect the
+   dashboard persistence flow.
+7. Optional: add `TAVILY_API_KEY` and set
+   `ENABLE_WIDE_WEB_GAME_SCAN=true` to enable the wider article/forum search
+   on direct game detail refresh.
+8. Start the app:
 
 ```bash
 npm install
@@ -32,9 +37,16 @@ Open `http://localhost:3000`.
 
 - Landing search routes to `/user/[name]`.
 - User reports use live Roblox identity and friends data, plus preview scoring.
-- Game risk cards are seeded with `Grow a Garden` so the experience is fully navigable now.
-- `Save as Child` stores data in browser local storage for this phase.
+- Game risk cards come from public Roblox game associations instead of a seeded demo watchlist.
+- The games section can expand to show all scored public associations, not just the high-risk subset.
+- Opening a game detail now triggers a deeper per-game refresh, including the
+  optional Tavily-backed wide web scan when configured.
+- `Save as Child` writes to Supabase when `SUPABASE_SERVICE_ROLE_KEY` is set.
+- Without that server key, the dashboard falls back to browser local storage.
 - `Download Report` exports a text snapshot. PDF generation is planned for P3.
+
+The current game scoring rubric is documented in [docs/game-scoring-rubric.md](docs/game-scoring-rubric.md).
+The full app scoring spec is documented in [Scoring.md](Scoring.md).
 
 ## Supabase
 

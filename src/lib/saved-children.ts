@@ -58,3 +58,11 @@ export function upsertSavedChild(child: SavedChildProfile) {
 
   return nextChildren;
 }
+
+export function removeSavedChild(childId: number) {
+  const nextChildren = readSavedChildren().filter((entry) => entry.id !== childId);
+
+  writeSavedChildren(nextChildren);
+
+  return nextChildren;
+}

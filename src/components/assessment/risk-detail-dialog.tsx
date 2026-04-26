@@ -1,9 +1,10 @@
 "use client";
 
 import Image from "next/image";
-import { ExternalLink } from "lucide-react";
+import { CircleHelp, ExternalLink, RefreshCw } from "lucide-react";
 
 import { Badge } from "@/components/ui/badge";
+import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import {
   Dialog,
@@ -15,7 +16,7 @@ import {
 import { Separator } from "@/components/ui/separator";
 import { formatCompactNumber, formatTimestamp } from "@/lib/format";
 import { getRiskColor, getRiskLabel } from "@/lib/risk";
-import type { FriendRiskSummary, GameRiskSummary } from "@/lib/types";
+import type { FriendRiskSummary, GameRiskSummary, RiskFactor } from "@/lib/types";
 import { cn } from "@/lib/utils";
 
 type RiskDialogEntity =
@@ -27,6 +28,8 @@ type RiskDetailDialogProps = {
   entity: RiskDialogEntity;
   open: boolean;
   onOpenChange: (open: boolean) => void;
+  onRefreshWideWeb?: () => void;
+  wideWebRefreshPending?: boolean;
 };
 
 function MetaRow({
@@ -46,10 +49,166 @@ function MetaRow({
   );
 }
 
+function formatFactorValue(value: RiskFactor["value"]) {
+  if (typeof value === "boolean") {
+    return value ? "Yes" : "No";
+  }
+
+  return String(value);
+}
+
+function formatContribution(contribution: number) {
+  return `${contribution.toFixed(1).replace(/\.0$/, "")} pts`;
+}
+
+function FactorNote({
+  label,
+  note,
+}: {
+  label: string;
+  note: string;
+}) {
+  return (
+    <span className="group/tooltip relative inline-flex">
+      <button
+        type="button"
+        aria-label={`${label} details`}
+        className="inline-flex size-5 items-center justify-center rounded-full border border-border bg-foreground/[0.04] text-muted-foreground transition-colors hover:text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring/60"
+      >
+        <CircleHelp className="size-3.5" />
+      </button>
+      <span
+        role="tooltip"
+        className="pointer-events-none absolute bottom-full left-0 z-20 mb-2 w-72 max-w-[min(18rem,calc(100vw-5rem))] rounded-[0.85rem] border border-border bg-popover px-3 py-2 text-xs leading-5 text-muted-foreground opacity-0 shadow-[0_18px_40px_rgba(0,0,0,0.22)] transition-opacity duration-200 group-hover/tooltip:opacity-100 group-focus-within/tooltip:opacity-100 sm:left-1/2 sm:-translate-x-1/2"
+      >
+        {note}
+      </span>
+    </span>
+  );
+}
+
+function FactorRow({
+  factor,
+  onRefreshWideWeb,
+  wideWebRefreshPending = false,
+}: {
+  factor: RiskFactor;
+  onRefreshWideWeb?: () => void;
+  wideWebRefreshPending?: boolean;
+}) {
+  const isWideWebFactor = factor.key === "wide-web-safety-search";
+
+  return (
+    <Card
+      className={cn(
+        "overflow-visible rounded-[1rem] py-0 shadow-none",
+        isWideWebFactor && wideWebRefreshPending
+          ? "bg-sky-500/[0.08] ring-2 ring-sky-400/35 shadow-[0_0_32px_rgba(56,189,248,0.12)]"
+          : isWideWebFactor
+            ? "bg-sky-500/[0.05] ring-1 ring-sky-400/20"
+          : "bg-foreground/[0.025] ring-1 ring-border",
+      )}
+    >
+      <CardContent className="grid gap-3 p-4 sm:grid-cols-[minmax(0,1fr)_minmax(8.5rem,auto)_minmax(7rem,auto)] sm:items-start sm:gap-x-5">
+        <div className="min-w-0">
+          <div className="flex flex-wrap items-center justify-between gap-3">
+            <div className="flex items-center gap-2">
+              <p className="text-sm font-medium text-foreground">{factor.label}</p>
+              <FactorNote label={factor.label} note={factor.note} />
+            </div>
+            {isWideWebFactor && onRefreshWideWeb ? (
+              <Button
+                type="button"
+                variant="outline"
+                size="sm"
+                className="h-8 rounded-full border-border bg-foreground/[0.03] px-3 text-[0.68rem] tracking-[0.12em] uppercase hover:bg-foreground/[0.06]"
+                onClick={onRefreshWideWeb}
+                disabled={wideWebRefreshPending}
+              >
+                <RefreshCw
+                  className={
+                    wideWebRefreshPending
+                      ? "size-3 animate-spin text-sky-400"
+                      : "size-3"
+                  }
+                />
+                Refresh search
+              </Button>
+            ) : null}
+          </div>
+          {isWideWebFactor && wideWebRefreshPending ? (
+            <div className="mt-2 inline-flex items-center gap-2 rounded-full border border-sky-400/30 bg-sky-500/10 px-3 py-1 text-[0.72rem] font-medium text-sky-700 dark:text-sky-200">
+              <span className="relative flex size-2.5">
+                <span className="absolute inline-flex h-full w-full animate-ping rounded-full bg-sky-400 opacity-75" />
+                <span className="relative inline-flex size-2.5 rounded-full bg-sky-400" />
+              </span>
+              Searching Tavily for wide web evidence
+            </div>
+          ) : null}
+          {factor.observedSignals?.length ? (
+            <ul className="mt-2 grid gap-1.5 pl-5 text-sm leading-6 text-muted-foreground list-disc">
+              {factor.observedSignals.map((signal) => (
+                <li key={signal}>{signal}</li>
+              ))}
+            </ul>
+          ) : null}
+          {factor.observedSources?.length ? (
+            <div className="mt-3">
+              <p className="text-[0.68rem] tracking-[0.18em] text-muted-foreground uppercase">
+                Source pages
+              </p>
+              <ul className="mt-2 grid gap-1.5 pl-5 text-sm leading-6 text-muted-foreground list-disc">
+                {factor.observedSources.map((source) => (
+                  <li key={`${source.label}-${source.url}`}>
+                    <a
+                      href={source.url}
+                      target="_blank"
+                      rel="noreferrer"
+                      className="inline-flex items-center gap-1 text-foreground/80 transition-colors hover:text-foreground"
+                    >
+                      <span>{source.label}</span>
+                      <ExternalLink className="size-3.5" />
+                    </a>
+                  </li>
+                ))}
+              </ul>
+            </div>
+          ) : null}
+        </div>
+        <div className="text-left sm:text-right">
+          <p className="text-[0.68rem] tracking-[0.18em] text-muted-foreground uppercase">
+            Observed value
+          </p>
+          <p className="mt-1 text-sm leading-6 text-foreground/80">
+            {formatFactorValue(factor.value)}
+          </p>
+        </div>
+        <div className="text-left sm:text-right">
+          <p className="text-[0.68rem] tracking-[0.18em] text-muted-foreground uppercase">
+            Contribution
+          </p>
+          <p
+            className={cn(
+              "mt-1 text-base font-semibold",
+              factor.contribution > 0
+                ? "text-foreground"
+                : "text-muted-foreground",
+            )}
+          >
+            {formatContribution(factor.contribution)}
+          </p>
+        </div>
+      </CardContent>
+    </Card>
+  );
+}
+
 export function RiskDetailDialog({
   entity,
   open,
   onOpenChange,
+  onRefreshWideWeb,
+  wideWebRefreshPending = false,
 }: RiskDetailDialogProps) {
   const friend = entity?.kind === "friend" ? entity.item : null;
   const game = entity?.kind === "game" ? entity.item : null;
@@ -58,11 +217,11 @@ export function RiskDetailDialog({
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent
-        className="w-[calc(100vw-2rem)] max-w-5xl overflow-hidden rounded-[1.75rem] border border-border bg-popover/96 p-0 text-popover-foreground shadow-[0_36px_120px_rgba(0,0,0,0.24)] lg:max-w-6xl"
+        className="w-[calc(100vw-2rem)] max-w-5xl overflow-visible rounded-[1.75rem] border border-border bg-popover/96 p-0 text-popover-foreground shadow-[0_36px_120px_rgba(0,0,0,0.24)] lg:max-w-6xl"
         showCloseButton
       >
         {item ? (
-          <div className="max-h-[88dvh] overflow-y-auto">
+          <div className="max-h-[88dvh] overflow-x-visible overflow-y-auto">
             <div className="p-5 sm:p-6 lg:p-8">
               <div className="grid gap-6 lg:grid-cols-[18rem_minmax(0,1fr)] lg:gap-8">
                 <div className="space-y-4">
@@ -191,32 +350,16 @@ export function RiskDetailDialog({
                 </h3>
                 <div className="grid gap-3">
                   {item.factors.map((factor) => (
-                    <Card
+                    <FactorRow
                       key={factor.key}
-                      className="rounded-[1rem] bg-foreground/[0.025] py-0 ring-1 ring-border shadow-none"
-                    >
-                      <CardContent className="flex flex-col gap-3 p-4 sm:flex-row sm:items-start sm:justify-between">
-                        <div className="min-w-0">
-                          <p className="text-sm font-medium text-foreground">
-                            {factor.label}
-                          </p>
-                          <p className="mt-1 text-sm leading-6 text-muted-foreground">
-                            {factor.note}
-                          </p>
-                        </div>
-                        <Badge
-                          variant="outline"
-                          className={cn(
-                            "h-8 rounded-full px-3 text-xs self-start",
-                            factor.active
-                              ? "border-border bg-foreground/[0.08] text-foreground"
-                              : "border-border bg-foreground/[0.03] text-muted-foreground",
-                          )}
-                        >
-                          {String(factor.value)}
-                        </Badge>
-                      </CardContent>
-                    </Card>
+                      factor={factor}
+                      onRefreshWideWeb={
+                        factor.key === "wide-web-safety-search"
+                          ? onRefreshWideWeb
+                          : undefined
+                      }
+                      wideWebRefreshPending={wideWebRefreshPending}
+                    />
                   ))}
                 </div>
               </div>

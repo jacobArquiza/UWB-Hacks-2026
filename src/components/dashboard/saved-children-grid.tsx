@@ -1,33 +1,91 @@
 "use client";
 
 import Link from "next/link";
-import { useSyncExternalStore } from "react";
-import { ArrowRight, Ghost } from "lucide-react";
+import { useState, useSyncExternalStore } from "react";
+import { ArrowRight, Ghost, Trash2 } from "lucide-react";
+import { toast } from "sonner";
 
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
+import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { readSavedChildren } from "@/lib/saved-children";
+import { readSavedChildren, removeSavedChild } from "@/lib/saved-children";
 import type { SavedChildProfile } from "@/lib/types";
 
-const emptySavedChildren = [] as SavedChildProfile[];
+const noopUnsubscribe = () => undefined;
 
-export function SavedChildrenGrid({ viewerName }: { viewerName: string }) {
-  const children = useSyncExternalStore(
-    (onStoreChange) => {
-      window.addEventListener("storage", onStoreChange);
-      window.addEventListener("roradar-saved-children-change", onStoreChange);
+type SavedChildrenGridProps = {
+  viewerName: string;
+  initialChildren: SavedChildProfile[];
+  storageMode: "local" | "supabase";
+};
 
-      return () => {
-        window.removeEventListener("storage", onStoreChange);
-        window.removeEventListener(
-          "roradar-saved-children-change",
-          onStoreChange,
-        );
-      };
-    },
-    () => readSavedChildren(),
-    () => emptySavedChildren,
+export function SavedChildrenGrid({
+  viewerName,
+  initialChildren,
+  storageMode,
+}: SavedChildrenGridProps) {
+  const storedChildren = useSyncExternalStore(
+    (onStoreChange) =>
+      storageMode === "local"
+        ? (() => {
+            window.addEventListener("storage", onStoreChange);
+            window.addEventListener("roradar-saved-children-change", onStoreChange);
+
+            return () => {
+              window.removeEventListener("storage", onStoreChange);
+              window.removeEventListener(
+                "roradar-saved-children-change",
+                onStoreChange,
+              );
+            };
+          })()
+        : noopUnsubscribe,
+    () => (storageMode === "local" ? readSavedChildren() : initialChildren),
+    () => initialChildren,
   );
+  const [remoteChildren, setRemoteChildren] = useState(initialChildren);
+  const [deletingChildId, setDeletingChildId] = useState<number | null>(null);
+
+  const children = storageMode === "local" ? storedChildren : remoteChildren;
+  const description =
+    storageMode === "supabase"
+      ? "Saved profiles are synced to your account and follow you across devices."
+      : "Supabase persistence is not configured yet, so this dashboard is still reading from this browser only.";
+
+  async function handleDelete(child: SavedChildProfile) {
+    setDeletingChildId(child.id);
+
+    try {
+      if (storageMode === "local") {
+        removeSavedChild(child.id);
+        toast.success("Removed from this browser's saved children.");
+        return;
+      }
+
+      const response = await fetch(`/api/saved-children/${child.id}`, {
+        method: "DELETE",
+      });
+
+      if (!response.ok) {
+        const payload = (await response.json().catch(() => null)) as
+          | { error?: string }
+          | null;
+
+        throw new Error(payload?.error ?? "Could not remove saved child.");
+      }
+
+      setRemoteChildren((existing) =>
+        existing.filter((entry) => entry.id !== child.id),
+      );
+      toast.success("Removed from your saved children.");
+    } catch (error) {
+      toast.error(
+        error instanceof Error ? error.message : "Delete failed unexpectedly.",
+      );
+    } finally {
+      setDeletingChildId(null);
+    }
+  }
 
   return (
     <div className="shell flex flex-1 flex-col gap-6 py-8 sm:py-10">
@@ -40,35 +98,50 @@ export function SavedChildrenGrid({ viewerName }: { viewerName: string }) {
             Saved children for {viewerName}
           </CardTitle>
           <p className="max-w-2xl text-sm leading-7 text-muted-foreground">
-            Phase 0 keeps saved profiles in this browser so the flow is fully
-            navigable before Supabase persistence is switched on.
+            {description}
           </p>
         </CardHeader>
         <CardContent className="px-6 pb-6">
           {children.length ? (
             <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-3">
               {children.map((child) => (
-                <Link
+                <div
                   key={child.id}
-                  href={`/user/${encodeURIComponent(child.name)}`}
-                  className="group rounded-[1.5rem] border border-border bg-foreground/[0.03] p-4 transition hover:opacity-74"
+                  className="flex items-center gap-4 rounded-[1.5rem] border border-border bg-foreground/[0.03] p-4 transition hover:opacity-92"
                 >
-                  <div className="flex items-center gap-4">
-                    <Avatar size="lg" className="size-14">
-                      <AvatarImage src={child.avatarUrl} alt={child.displayName} />
-                      <AvatarFallback>{child.displayName.slice(0, 1)}</AvatarFallback>
-                    </Avatar>
-                    <div className="min-w-0 flex-1">
-                      <p className="truncate font-medium text-foreground">
-                        {child.displayName}
-                      </p>
-                      <p className="truncate text-sm text-muted-foreground">
-                        @{child.name}
-                      </p>
-                    </div>
-                    <ArrowRight className="size-4 text-muted-foreground transition group-hover:translate-x-0.5" />
+                  <Avatar size="lg" className="size-14">
+                    <AvatarImage src={child.avatarUrl} alt={child.displayName} />
+                    <AvatarFallback>{child.displayName.slice(0, 1)}</AvatarFallback>
+                  </Avatar>
+                  <div className="min-w-0 flex-1">
+                    <p className="truncate font-medium text-foreground">
+                      {child.displayName}
+                    </p>
+                    <p className="truncate text-sm text-muted-foreground">
+                      @{child.name}
+                    </p>
                   </div>
-                </Link>
+                  <div className="flex items-center gap-2">
+                    <Link
+                      href={`/user/${encodeURIComponent(child.name)}`}
+                      aria-label={`Open ${child.displayName}`}
+                      className="inline-flex size-9 items-center justify-center rounded-full border border-border bg-background/70 text-muted-foreground transition hover:bg-foreground/[0.06] hover:text-foreground"
+                    >
+                      <ArrowRight className="size-4" />
+                    </Link>
+                    <Button
+                      type="button"
+                      variant="ghost"
+                      size="icon"
+                      aria-label={`Remove ${child.displayName}`}
+                      disabled={deletingChildId === child.id}
+                      onClick={() => handleDelete(child)}
+                      className="size-9 rounded-full text-destructive hover:bg-destructive/12 hover:text-destructive"
+                    >
+                      <Trash2 className="size-4" />
+                    </Button>
+                  </div>
+                </div>
               ))}
             </div>
           ) : (

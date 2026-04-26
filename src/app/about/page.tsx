@@ -33,7 +33,7 @@ const pillars = [
 
 const methods = [
   "Roblox profile and friend graph analysis",
-  "Game-level metadata and watchlist evaluation",
+  "Game-level metadata and public association evaluation",
   "Community-sourced warning signals and discussion context",
   "Human-readable reports built for parents, not moderators",
 ];

@@ -4,13 +4,9 @@ import { load } from "cheerio";
 import type { RobloxGameProfile, RobloxUserProfile } from "@/lib/types";
 
 const robloxUserLookupUrl = "https://users.roblox.com/v1/usernames/users";
-
-const phase0SeedGames = {
-  "grow a garden": {
-    placeId: 126884695634066,
-    slug: "Grow-a-Garden",
-  },
-} as const;
+const robloxGamesByUniverseUrl = "https://games.roblox.com/v1/games";
+const robloxGameVotesUrl = "https://games.roblox.com/v1/games/votes";
+const robloxGameIconsUrl = "https://thumbnails.roblox.com/v1/games/icons";
 
 type RobloxUserLookupResponse = {
   data: Array<{
@@ -45,6 +41,79 @@ type RobloxUserAvatarResponse = {
     targetId: number;
     imageUrl: string;
   }>;
+};
+
+type RobloxGameCreator = {
+  id: number;
+  name?: string;
+  type: string;
+  hasVerifiedBadge?: boolean;
+};
+
+type RobloxUserGameListResponse = {
+  data: Array<{
+    id: number;
+    name: string;
+    description: string;
+    creator: RobloxGameCreator;
+    rootPlace: {
+      id: number;
+      type: string;
+    };
+    created: string;
+    updated: string;
+    placeVisits: number;
+  }>;
+};
+
+type RobloxGameDetailsResponse = {
+  data: Array<{
+    id: number;
+    rootPlaceId: number;
+    name: string;
+    description: string;
+    creator: RobloxGameCreator;
+    created: string;
+    updated: string;
+    genre_l1?: string;
+    genre_l2?: string;
+    canonicalUrlPath?: string;
+    createVipServersAllowed?: boolean;
+  }>;
+};
+
+type RobloxGameVotesResponse = {
+  data: Array<{
+    id: number;
+    upVotes: number;
+    downVotes: number;
+  }>;
+};
+
+type RobloxPrivateServersResponse = {
+  privateServersEnabled: boolean;
+};
+
+type RobloxGameIconsResponse = {
+  data: Array<{
+    targetId: number;
+    imageUrl: string;
+  }>;
+};
+
+type RobloxGameSeedEntry = {
+  universeId: number;
+  rootPlaceId: number;
+  name?: string;
+  description?: string;
+  creator?: RobloxGameCreator;
+  creatorUrl?: string;
+  created?: null | string;
+  updated?: null | string;
+  thumbnailUrl?: string;
+  robloxUrl?: string;
+  privateServersEnabled?: boolean;
+  associationSources: string[];
 };
 
 async function robloxFetch<T>(input: string, init?: RequestInit) {
@@ -142,37 +211,197 @@ export async function getRobloxFriends(userId: number, limit = 12) {
   return Promise.all(userIds.map((friendId) => getRobloxUserById(friendId)));
 }
 
-function normalizeLookupValue(value: string) {
-  return value
-    .toLowerCase()
-    .trim()
-    .replace(/[^a-z0-9]+/g, " ")
-    .replace(/\s+/g, " ");
-}
-
-export async function getPhase0SeedGameByName(name: string) {
-  const match =
-    phase0SeedGames[
-      normalizeLookupValue(name) as keyof typeof phase0SeedGames
-    ];
-
-  if (!match) {
-    return null;
+function buildCreatorUrl(creator: RobloxGameCreator) {
+  if (creator.type === "Group") {
+    return `https://www.roblox.com/groups/${creator.id}/group`;
   }
 
-  return getPhase0SeedGameByPlaceId(match.placeId);
+  return `https://www.roblox.com/users/${creator.id}/profile`;
 }
 
-export async function getPhase0SeedGameByPlaceId(placeId: number) {
-  const entry = Object.values(phase0SeedGames).find(
-    (game) => game.placeId === placeId,
+function parseCreatorFromUrl(url: string | undefined, name: string) {
+  if (!url) {
+    return undefined;
+  }
+
+  try {
+    const pathname = url.startsWith("http") ? new URL(url).pathname : url;
+    const userMatch = pathname.match(/\/users\/(\d+)\//i);
+
+    if (userMatch) {
+      return {
+        id: Number(userMatch[1]),
+        name,
+        type: "User",
+      } satisfies RobloxGameCreator;
+    }
+
+    const groupMatch = pathname.match(/\/groups\/(\d+)\//i);
+
+    if (groupMatch) {
+      return {
+        id: Number(groupMatch[1]),
+        name,
+        type: "Group",
+      } satisfies RobloxGameCreator;
+    }
+  } catch {
+    return undefined;
+  }
+
+  return undefined;
+}
+
+function normalizeGenres(...values: Array<null | string | undefined>) {
+  return Array.from(
+    new Set(
+      values
+        .map((value) => value?.trim())
+        .filter(
+          (value): value is string =>
+            Boolean(
+              value &&
+                value.toLowerCase() !== "all" &&
+                value.toLowerCase() !== "na",
+            ),
+        ),
+    ),
+  );
+}
+
+function mapGameListEntryToSeed(
+  entry: RobloxUserGameListResponse["data"][number],
+  associationSource: string,
+) {
+  return {
+    universeId: entry.id,
+    rootPlaceId: entry.rootPlace.id,
+    name: entry.name,
+    description: entry.description,
+    creator: entry.creator,
+    created: entry.created,
+    updated: entry.updated,
+    associationSources: [associationSource],
+  } satisfies RobloxGameSeedEntry;
+}
+
+async function hydrateRobloxGames(entries: RobloxGameSeedEntry[]) {
+  const dedupedEntries = Array.from(
+    entries
+      .reduce((map, entry) => {
+        const existing = map.get(entry.universeId);
+
+        if (!existing) {
+          map.set(entry.universeId, {
+            ...entry,
+            associationSources: Array.from(new Set(entry.associationSources)),
+          });
+          return map;
+        }
+
+        map.set(entry.universeId, {
+          ...existing,
+          ...entry,
+          associationSources: Array.from(
+            new Set([
+              ...existing.associationSources,
+              ...entry.associationSources,
+            ]),
+          ),
+        });
+
+        return map;
+      }, new Map<number, RobloxGameSeedEntry>())
+      .values(),
   );
 
-  if (!entry) {
-    return null;
+  if (!dedupedEntries.length) {
+    return [] as RobloxGameProfile[];
   }
 
-  const url = `https://www.roblox.com/games/${entry.placeId}/${entry.slug}`;
+  const universeIds = dedupedEntries.map((entry) => entry.universeId);
+  const [detailsPayload, votesPayload, iconPayload, privateServerFlags] =
+    await Promise.all([
+      robloxFetch<RobloxGameDetailsResponse>(
+        `${robloxGamesByUniverseUrl}?universeIds=${universeIds.join(",")}`,
+        { headers: {} },
+      ).catch(() => ({ data: [] })),
+      robloxFetch<RobloxGameVotesResponse>(
+        `${robloxGameVotesUrl}?universeIds=${universeIds.join(",")}`,
+        { headers: {} },
+      ).catch(() => ({ data: [] })),
+      robloxFetch<RobloxGameIconsResponse>(
+        `${robloxGameIconsUrl}?universeIds=${universeIds.join(",")}&returnPolicy=PlaceHolder&size=512x512&format=Png&isCircular=false`,
+        { headers: {} },
+      ).catch(() => ({ data: [] })),
+      Promise.all(
+        universeIds.map(async (universeId) => [
+          universeId,
+          await robloxFetch<RobloxPrivateServersResponse>(
+            `https://games.roblox.com/v1/private-servers/enabled-in-universe/${universeId}`,
+            { headers: {} },
+          )
+            .then((payload) => payload.privateServersEnabled)
+            .catch(() => false),
+        ]),
+      ),
+    ]);
+
+  const detailsByUniverseId = new Map(
+    detailsPayload.data.map((detail) => [detail.id, detail]),
+  );
+  const votesByUniverseId = new Map(
+    votesPayload.data.map((voteSummary) => [voteSummary.id, voteSummary]),
+  );
+  const iconsByUniverseId = new Map(
+    iconPayload.data.map((icon) => [icon.targetId, icon.imageUrl]),
+  );
+  const privateServersByUniverseId = new Map(privateServerFlags);
+
+  return dedupedEntries.map((entry) => {
+    const details = detailsByUniverseId.get(entry.universeId);
+    const votes = votesByUniverseId.get(entry.universeId);
+    const rootPlaceId = details?.rootPlaceId ?? entry.rootPlaceId;
+    const creator = details?.creator ?? entry.creator;
+    const totalVotes = votes ? votes.upVotes + votes.downVotes : null;
+    const rating =
+      totalVotes && totalVotes > 0 ? (votes!.upVotes / totalVotes) * 100 : null;
+
+    return {
+      placeId: rootPlaceId,
+      universeId: entry.universeId,
+      name: decode(details?.name ?? entry.name ?? "Unknown game").trim(),
+      creatorName: decode(creator?.name ?? "Unknown creator").trim(),
+      creatorUrl:
+        creator != null && creator.id > 0
+          ? buildCreatorUrl(creator)
+          : entry.creatorUrl ?? `https://www.roblox.com/games/${rootPlaceId}`,
+      robloxUrl:
+        details?.canonicalUrlPath != null
+          ? `https://www.roblox.com${details.canonicalUrlPath}`
+          : entry.robloxUrl ?? `https://www.roblox.com/games/${rootPlaceId}`,
+      description: decode(
+        details?.description ?? entry.description ?? "No description available.",
+      ).trim(),
+      thumbnailUrl:
+        iconsByUniverseId.get(entry.universeId) ?? entry.thumbnailUrl ?? "",
+      genres: normalizeGenres(details?.genre_l1, details?.genre_l2),
+      rating,
+      ratingCount: totalVotes,
+      created: details?.created ?? entry.created ?? null,
+      updated: details?.updated ?? entry.updated ?? null,
+      privateServersEnabled:
+        privateServersByUniverseId.get(entry.universeId) ??
+        details?.createVipServersAllowed ??
+        entry.privateServersEnabled ??
+        false,
+      associationSources: entry.associationSources,
+    } satisfies RobloxGameProfile;
+  });
+}
+
+async function getRobloxGameSeedByPlaceId(placeId: number) {
+  const url = `https://www.roblox.com/games/${placeId}`;
   const response = await fetch(url, { cache: "no-store" });
 
   if (!response.ok) {
@@ -181,7 +410,6 @@ export async function getPhase0SeedGameByPlaceId(placeId: number) {
 
   const html = await response.text();
   const $ = load(html);
-
   const metadataNode = $("#game-detail-meta-data");
   const jsonLd = $("script[type='application/ld+json']").first().text().trim();
   const parsed = jsonLd
@@ -205,38 +433,103 @@ export async function getPhase0SeedGameByPlaceId(placeId: number) {
 
   const creatorAnchor = $(".game-creator a").first();
   const heading = $(".game-name").first().text().trim();
-  const ogImage = $('meta[property="og:image"]').attr("content") ?? parsed.image ?? "";
-  const universeId = Number(metadataNode.attr("data-universe-id")) || entry.placeId;
+  const creatorName = decode(
+    creatorAnchor.text().trim() || parsed.author?.name || "Unknown creator",
+  ).trim();
+  const creatorHref = creatorAnchor.attr("href");
+  const creatorUrl =
+    creatorHref?.startsWith("http")
+      ? creatorHref
+      : creatorHref
+        ? `https://www.roblox.com${creatorHref}`
+        : parsed.author?.url;
+  const ogImage =
+    $('meta[property="og:image"]').attr("content") ?? parsed.image ?? "";
+  const ogUrl = $('meta[property="og:url"]').attr("content") ?? url;
+  const universeId =
+    Number(metadataNode.attr("data-universe-id")) ||
+    Number(/"universeId":\s*(\d+)/.exec(html)?.[1] ?? 0);
+
+  if (!universeId) {
+    throw new Error("Roblox game details unavailable");
+  }
 
   return {
-    placeId: entry.placeId,
     universeId,
-    name: decode(heading || parsed.name || "Grow a Garden").trim(),
-    creatorName:
-      decode(creatorAnchor.text().trim() || parsed.author?.name || "Unknown creator"),
-    creatorUrl:
-      creatorAnchor.attr("href")?.startsWith("http")
-        ? creatorAnchor.attr("href")!
-        : `https://www.roblox.com${creatorAnchor.attr("href") ?? ""}`,
-    robloxUrl: url,
+    rootPlaceId: placeId,
+    name: decode(heading || parsed.name || "Unknown game").trim(),
     description: decode(
       parsed.description ||
         $('meta[name="description"]').attr("content") ||
         "No description available.",
-    ),
-    thumbnailUrl: ogImage,
-    genres: parsed.genre ?? [],
-    rating:
-      typeof parsed.aggregateRating?.ratingValue === "number"
-        ? parsed.aggregateRating.ratingValue
-        : null,
-    ratingCount:
-      typeof parsed.aggregateRating?.ratingCount === "number"
-        ? parsed.aggregateRating.ratingCount
-        : null,
+    ).trim(),
+    creator:
+      parseCreatorFromUrl(creatorUrl, creatorName) ?? {
+        id: 0,
+        name: creatorName,
+        type: "User",
+      },
+    creatorUrl,
     created: parsed.dateCreated ?? null,
     updated: parsed.dateModified ?? null,
+    thumbnailUrl: ogImage,
+    robloxUrl: ogUrl,
     privateServersEnabled:
       html.includes("Private Server") || html.includes("VIP Server"),
-  } satisfies RobloxGameProfile;
+    associationSources: ["Direct place lookup"],
+  } satisfies RobloxGameSeedEntry;
+}
+
+export async function getRobloxGamesForUser(userId: number, limit = 8) {
+  const [favoriteGamesPayload, createdGamesPayload] = await Promise.all([
+    robloxFetch<RobloxUserGameListResponse>(
+      `https://games.roblox.com/v2/users/${userId}/favorite/games`,
+      { headers: {} },
+    ).catch(() => ({ data: [] })),
+    robloxFetch<RobloxUserGameListResponse>(
+      `https://games.roblox.com/v2/users/${userId}/games?accessFilter=Public&limit=${limit}&sortOrder=Desc`,
+      { headers: {} },
+    ).catch(() => ({ data: [] })),
+  ]);
+
+  const gameSeeds = [
+    ...favoriteGamesPayload.data.map((entry) =>
+      mapGameListEntryToSeed(entry, "Public favorites list"),
+    ),
+    ...createdGamesPayload.data.map((entry) =>
+      mapGameListEntryToSeed(entry, "Public created experiences"),
+    ),
+  ].slice(0, Math.max(limit * 2, limit));
+
+  const hydratedGames = await hydrateRobloxGames(gameSeeds);
+
+  return hydratedGames.slice(0, limit);
+}
+
+export async function getRobloxGameByPlaceId(placeId: number) {
+  const gameSeed = await getRobloxGameSeedByPlaceId(placeId);
+  const [game] = await hydrateRobloxGames([gameSeed]);
+
+  if (!game) {
+    return {
+      placeId,
+      universeId: gameSeed.universeId,
+      name: gameSeed.name ?? "Unknown game",
+      creatorUrl:
+        gameSeed.creatorUrl ?? `https://www.roblox.com/games/${placeId}`,
+      creatorName: gameSeed.creator?.name ?? "Unknown creator",
+      robloxUrl: gameSeed.robloxUrl ?? `https://www.roblox.com/games/${placeId}`,
+      description: gameSeed.description ?? "No description available.",
+      thumbnailUrl: gameSeed.thumbnailUrl ?? "",
+      genres: [],
+      rating: null,
+      ratingCount: null,
+      created: gameSeed.created ?? null,
+      updated: gameSeed.updated ?? null,
+      privateServersEnabled: gameSeed.privateServersEnabled ?? false,
+      associationSources: gameSeed.associationSources,
+    } satisfies RobloxGameProfile;
+  }
+
+  return game;
 }

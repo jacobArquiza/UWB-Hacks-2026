@@ -12,14 +12,17 @@ import {
   preferencesChangeEventName,
   reducedMotionPreferenceKey,
   themePreferenceKey,
+  wideWebSearchPreferenceKey,
   type ThemePreference,
 } from "@/lib/preferences";
 
 type PreferencesContextValue = {
   theme: ThemePreference;
   reducedMotion: boolean;
+  wideWebSearchEnabled: boolean;
   setTheme: (theme: ThemePreference) => void;
   setReducedMotion: (reducedMotion: boolean) => void;
+  setWideWebSearchEnabled: (wideWebSearchEnabled: boolean) => void;
   resetPreferences: () => void;
 };
 
@@ -27,10 +30,12 @@ const PreferencesContext = createContext<PreferencesContextValue | null>(null);
 const defaultPreferencesSnapshot = {
   theme: "dark" as ThemePreference,
   reducedMotion: false,
+  wideWebSearchEnabled: true,
 };
 
 let cachedTheme = defaultPreferencesSnapshot.theme;
 let cachedReducedMotion = defaultPreferencesSnapshot.reducedMotion;
+let cachedWideWebSearchEnabled = defaultPreferencesSnapshot.wideWebSearchEnabled;
 let cachedSnapshot = defaultPreferencesSnapshot;
 
 function applyPreferences(theme: ThemePreference, reducedMotion: boolean) {
@@ -53,16 +58,24 @@ function readPreferencesSnapshot() {
     window.localStorage.getItem(themePreferenceKey) === "light" ? "light" : "dark";
   const nextReducedMotion =
     window.localStorage.getItem(reducedMotionPreferenceKey) === "true";
+  const nextWideWebSearchEnabled =
+    window.localStorage.getItem(wideWebSearchPreferenceKey) !== "false";
 
-  if (nextTheme === cachedTheme && nextReducedMotion === cachedReducedMotion) {
+  if (
+    nextTheme === cachedTheme &&
+    nextReducedMotion === cachedReducedMotion &&
+    nextWideWebSearchEnabled === cachedWideWebSearchEnabled
+  ) {
     return cachedSnapshot;
   }
 
   cachedTheme = nextTheme;
   cachedReducedMotion = nextReducedMotion;
+  cachedWideWebSearchEnabled = nextWideWebSearchEnabled;
   cachedSnapshot = {
     theme: nextTheme,
     reducedMotion: nextReducedMotion,
+    wideWebSearchEnabled: nextWideWebSearchEnabled,
   };
 
   return cachedSnapshot;
@@ -79,7 +92,7 @@ function subscribeToPreferences(onStoreChange: () => void) {
 }
 
 export function PreferencesProvider({ children }: { children: ReactNode }) {
-  const { theme, reducedMotion } = useSyncExternalStore(
+  const { theme, reducedMotion, wideWebSearchEnabled } = useSyncExternalStore(
     subscribeToPreferences,
     readPreferencesSnapshot,
     () => defaultPreferencesSnapshot,
@@ -104,9 +117,18 @@ export function PreferencesProvider({ children }: { children: ReactNode }) {
     window.dispatchEvent(new Event(preferencesChangeEventName));
   }
 
+  function setWideWebSearchEnabled(nextWideWebSearchEnabled: boolean) {
+    window.localStorage.setItem(
+      wideWebSearchPreferenceKey,
+      String(nextWideWebSearchEnabled),
+    );
+    window.dispatchEvent(new Event(preferencesChangeEventName));
+  }
+
   function resetPreferences() {
     window.localStorage.removeItem(themePreferenceKey);
     window.localStorage.removeItem(reducedMotionPreferenceKey);
+    window.localStorage.removeItem(wideWebSearchPreferenceKey);
     applyPreferences("dark", false);
     window.dispatchEvent(new Event(preferencesChangeEventName));
   }
@@ -116,8 +138,10 @@ export function PreferencesProvider({ children }: { children: ReactNode }) {
       value={{
         theme,
         reducedMotion,
+        wideWebSearchEnabled,
         setTheme,
         setReducedMotion,
+        setWideWebSearchEnabled,
         resetPreferences,
       }}
     >

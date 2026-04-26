@@ -1,7 +1,14 @@
 "use client";
 
 import type { ReactNode } from "react";
-import { MoonStar, RotateCcw, Settings2, SunMedium, Waves } from "lucide-react";
+import {
+  Globe,
+  MoonStar,
+  RotateCcw,
+  Settings2,
+  SunMedium,
+  Waves,
+} from "lucide-react";
 
 import { Badge } from "@/components/ui/badge";
 import { Button, buttonVariants } from "@/components/ui/button";
@@ -44,8 +51,10 @@ export function SiteSettingsDialog() {
   const {
     theme,
     reducedMotion,
+    wideWebSearchEnabled,
     setTheme,
     setReducedMotion,
+    setWideWebSearchEnabled,
     resetPreferences,
   } = usePreferences();
 
@@ -142,6 +151,27 @@ export function SiteSettingsDialog() {
             >
               <Waves className="size-4" />
               {reducedMotion ? "Enabled" : "Disabled"}
+            </Button>
+          </SettingCard>
+
+          <SettingCard
+            title="Wide web safety search"
+            description="Control the Tavily-backed article scan on game detail refreshes. Disable it during testing if you want to avoid spending search credits."
+          >
+            <Button
+              type="button"
+              variant={wideWebSearchEnabled ? "default" : "outline"}
+              size="lg"
+              className={cn(
+                "min-w-[9.25rem] rounded-[0.95rem]",
+                wideWebSearchEnabled
+                  ? "bg-primary text-primary-foreground hover:bg-primary/92"
+                  : "border-border bg-transparent text-foreground hover:bg-foreground/[0.05]",
+              )}
+              onClick={() => setWideWebSearchEnabled(!wideWebSearchEnabled)}
+            >
+              <Globe className="size-4" />
+              {wideWebSearchEnabled ? "Enabled" : "Disabled"}
             </Button>
           </SettingCard>
         </div>

@@ -4,6 +4,10 @@ import { SavedChildrenGrid } from "@/components/dashboard/saved-children-grid";
 import { buttonVariants } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { getSessionSafe, isAuth0Configured } from "@/lib/auth0";
+import {
+  isSavedChildrenPersistenceConfigured,
+  listSavedChildren,
+} from "@/lib/saved-children-store";
 import { cn } from "@/lib/utils";
 
 export default async function DashboardPage() {
@@ -58,11 +62,17 @@ export default async function DashboardPage() {
     );
   }
 
+  const savedChildren = isSavedChildrenPersistenceConfigured
+    ? await listSavedChildren(session)
+    : [];
+
   return (
     <SavedChildrenGrid
       viewerName={
         session.user.name ?? session.user.nickname ?? session.user.email ?? "you"
       }
+      initialChildren={savedChildren}
+      storageMode={isSavedChildrenPersistenceConfigured ? "supabase" : "local"}
     />
   );
 }

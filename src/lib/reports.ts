@@ -44,8 +44,14 @@ export function buildPhase0ReportText(assessment: UserAssessment) {
       );
       friend.factors.forEach((factor) => {
         lines.push(
-          `  • ${factor.label}: ${String(factor.value)}${factor.active ? "" : " (inactive)"}`,
+          `  • ${factor.label}: ${String(factor.value)}${factor.active ? "" : " (inactive)"} [${factor.contribution} pts]`,
         );
+        factor.observedSignals?.forEach((signal) => {
+          lines.push(`    - ${signal}`);
+        });
+        factor.observedSources?.forEach((source) => {
+          lines.push(`    - Source: ${source.label} -> ${source.url}`);
+        });
       });
       lines.push(`  • Roblox profile: ${friend.profileUrl}`);
       lines.push("");
@@ -55,25 +61,47 @@ export function buildPhase0ReportText(assessment: UserAssessment) {
   lines.push("High-Risk Games");
   lines.push("---------------");
 
-  assessment.highRiskGames.forEach((game) => {
-    lines.push(
-      `${game.name} - ${game.score}% (${getRiskLabel(game.level)})`,
-      `  • Creator: ${game.creatorName}`,
-      `  • Link: ${game.robloxUrl}`,
-      ...renderGameStats(game)
-        .split("\n")
-        .map((line) => `  • ${line}`),
-    );
-    game.factors.forEach((factor) => {
+  if (!assessment.highRiskGames.length) {
+    lines.push("No public favorite or created games crossed the preview game threshold.");
+    if (assessment.scoredGames.length) {
       lines.push(
-        `  • ${factor.label}: ${String(factor.value)}${factor.active ? "" : " (inactive)"}`,
+        `The app still scored ${assessment.scoredGames.length} public game association(s) below that threshold.`,
       );
+    }
+  } else {
+    assessment.highRiskGames.forEach((game) => {
+      lines.push(
+        `${game.name} - ${game.score}% (${getRiskLabel(game.level)})`,
+        `  • Creator: ${game.creatorName}`,
+        `  • Link: ${game.robloxUrl}`,
+        ...renderGameStats(game)
+          .split("\n")
+          .map((line) => `  • ${line}`),
+      );
+      game.factors.forEach((factor) => {
+        lines.push(
+          `  • ${factor.label}: ${String(factor.value)}${factor.active ? "" : " (inactive)"} [${factor.contribution} pts]`,
+        );
+        factor.observedSignals?.forEach((signal) => {
+          lines.push(`    - ${signal}`);
+        });
+        factor.observedSources?.forEach((source) => {
+          lines.push(`    - Source: ${source.label} -> ${source.url}`);
+        });
+      });
+      lines.push("");
     });
-    lines.push("");
-  });
+
+    if (assessment.scoredGames.length > assessment.highRiskGames.length) {
+      lines.push(
+        "Lower-scoring public game associations are available in the app under Show all scored games.",
+      );
+      lines.push("");
+    }
+  }
 
   lines.push(
-    "Phase 0 disclosure: this report blends live Roblox profile data with seeded demo scoring and does not yet include external community-source searches.",
+    "Phase 0 disclosure: this report blends live Roblox profile data, public Roblox game associations, preview scoring, and lightweight Reddit / DevForum corroboration. Private recent-play history and YouTube checks are still out of scope.",
   );
 
   return lines.join("\n");

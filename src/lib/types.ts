@@ -1,4 +1,14 @@
 export type RiskLevel = "low" | "guarded" | "elevated" | "high";
+export type WideWebSearchMode =
+  | "deferred"
+  | "cache-only"
+  | "prefer-cache"
+  | "force-refresh";
+
+export interface RiskEvidenceLink {
+  label: string;
+  url: string;
+}
 
 export interface RiskFactor {
   key: string;
@@ -6,6 +16,9 @@ export interface RiskFactor {
   value: string | number | boolean;
   active: boolean;
   note: string;
+  contribution: number;
+  observedSignals?: string[];
+  observedSources?: RiskEvidenceLink[];
 }
 
 export interface RobloxUserProfile {
@@ -36,6 +49,7 @@ export interface RobloxGameProfile {
   created: string | null;
   updated: string | null;
   privateServersEnabled: boolean;
+  associationSources: string[];
 }
 
 export interface FriendRiskSummary {
@@ -71,6 +85,7 @@ export interface GameRiskSummary {
   created: string | null;
   updated: string | null;
   privateServersEnabled: boolean;
+  associationSources: string[];
 }
 
 export interface UserAssessment {
@@ -85,6 +100,7 @@ export interface UserAssessment {
   notes: string[];
   highRiskFriends: FriendRiskSummary[];
   highRiskGames: GameRiskSummary[];
+  scoredGames: GameRiskSummary[];
 }
 
 export interface SavedChildProfile {

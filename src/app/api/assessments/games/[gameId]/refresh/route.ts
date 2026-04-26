@@ -1,15 +1,21 @@
 import { buildPreviewGameById } from "@/lib/assessment";
+import type { WideWebSearchMode } from "@/lib/types";
 
 export const dynamic = "force-dynamic";
 
 export async function POST(
-  _request: Request,
+  request: Request,
   { params }: { params: Promise<{ gameId: string }> },
 ) {
   const { gameId } = await params;
+  const payload = (await request.json().catch(() => null)) as
+    | { wideWebSearchMode?: WideWebSearchMode }
+    | null;
 
   try {
-    const game = await buildPreviewGameById(Number(gameId));
+    const game = await buildPreviewGameById(Number(gameId), {
+      wideWebSearchMode: payload?.wideWebSearchMode ?? "prefer-cache",
+    });
     return Response.json({ game });
   } catch (error) {
     return Response.json(

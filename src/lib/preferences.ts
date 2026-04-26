@@ -2,6 +2,7 @@ export type ThemePreference = "dark" | "light";
 
 export const themePreferenceKey = "roradar.theme";
 export const reducedMotionPreferenceKey = "roradar.reduced-motion";
+export const wideWebSearchPreferenceKey = "roradar.wide-web-search";
 export const preferencesChangeEventName = "roradar-preferences-change";
 
 export function getPreferencesBootstrapScript() {
