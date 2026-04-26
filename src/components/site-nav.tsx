@@ -27,7 +27,7 @@ export function SiteNav({
               className="flex min-w-0 items-center justify-self-start transition-opacity hover:opacity-80"
             >
               <span className="flex h-11 min-w-[11rem] items-center justify-center rounded-[1rem] bg-foreground px-6 font-heading text-[0.96rem] font-medium text-background sm:min-w-[14rem] lg:min-w-[18rem]">
-                Placeholder Logo
+                RoRadar
               </span>
             </Link>
 

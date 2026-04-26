@@ -27,20 +27,20 @@ const sections = [
   {
     title: "Third-party services",
     body: [
-      "RoRadar relies on third-party services to operate. Depending on the features enabled in your deployment, these may include Auth0 for authentication, Supabase for stored application data, Roblox public endpoints for profile and game information, Tavily for wide web search, and Google Gemini / Gemma APIs for second-pass evidence classification.",
-      "Those providers may process data necessary to fulfill their role. If you deploy RoRadar yourself, you are responsible for reviewing the terms and privacy practices of the third-party services you configure.",
+      "RoRadar relies on third-party services to operate. Depending on the features enabled, these may include services for account sign-in, application data storage, profile and game lookup, deeper web search, and automated evidence review.",
+      "Those providers may process the data necessary to fulfill their role. If you deploy RoRadar yourself, you are responsible for reviewing the terms and privacy practices of the services you configure.",
     ],
   },
   {
-    title: "Cookies and local storage",
+    title: "Cookies and device storage",
     body: [
-      "RoRadar may use cookies or similar session mechanisms through its authentication provider. It also uses browser local storage for client-side preferences and as a fallback store when account-backed persistence is not configured.",
+      "RoRadar may use cookies or similar session mechanisms to support account sign-in. It also uses on-device storage for client-side preferences and as a fallback store when account-backed saving is unavailable.",
     ],
   },
   {
     title: "Data sharing",
     body: [
-      "RoRadar does not present itself as a public social platform, and the application is intended to keep parent-facing report data within the context of the authenticated account or local browser where it was saved.",
+      "RoRadar does not present itself as a public social platform, and the application is intended to keep parent-facing report data within the context of the signed-in account or the device where it was saved.",
       "RoRadar may disclose information if required by law, to respond to a valid legal process, or to protect the integrity, security, or operation of the service.",
     ],
   },

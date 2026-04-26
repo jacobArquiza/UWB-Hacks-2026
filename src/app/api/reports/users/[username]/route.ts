@@ -1,6 +1,6 @@
 import { slugify } from "@/lib/format";
-import { buildPreviewAssessment } from "@/lib/assessment";
-import { buildPhase0ReportText } from "@/lib/reports";
+import { buildUserAssessment } from "@/lib/assessment";
+import { buildReportText } from "@/lib/reports";
 
 export const dynamic = "force-dynamic";
 
@@ -10,8 +10,8 @@ export async function GET(
 ) {
   const { username } = await params;
   const decodedUsername = decodeURIComponent(username);
-  const assessment = await buildPreviewAssessment(decodedUsername);
-  const reportText = buildPhase0ReportText(assessment);
+  const assessment = await buildUserAssessment(decodedUsername);
+  const reportText = buildReportText(assessment);
 
   return new Response(reportText, {
     headers: {

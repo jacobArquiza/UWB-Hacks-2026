@@ -25,7 +25,7 @@ create table if not exists public.user_assessments (
   roblox_user_id bigint not null,
   username text not null,
   overall_score integer not null check (overall_score between 0 and 100),
-  assessment_mode text not null default 'preview',
+  assessment_mode text not null default 'live',
   summary text not null,
   source_payload jsonb not null default '{}'::jsonb,
   assessed_at timestamptz not null default now()

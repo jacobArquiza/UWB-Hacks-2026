@@ -93,7 +93,7 @@ export interface UserAssessment {
   overallRiskScore: number;
   overallRiskLevel: RiskLevel;
   summary: string;
-  mode: "phase0-preview";
+  mode: "live-assessment";
   lastAssessed: string;
   friendsLastAssessed: string;
   gamesLastAssessed: string;

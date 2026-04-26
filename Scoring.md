@@ -1,8 +1,8 @@
 # RoRadar Scoring
 
-This document explains the scoring rubric currently used by RoRadar in Phase 0.
+This document explains the scoring rubric currently used by RoRadar.
 
-It is a description of the scoring system the app actually runs today, not an aspirational roadmap.
+It documents the live scoring system the app runs today.
 
 ## What the app is trying to do
 
@@ -50,7 +50,7 @@ Those principles are what make the rubric logical. The system is trying to order
 - optional Tavily-backed wide web scans on direct game detail refresh
 - optional Gemma 4 validation of wide web results before they count
 
-### Not yet integrated into live scoring
+### Data outside current scoring inputs
 
 - private recent-play history
 - Roblox chat logs
@@ -176,7 +176,7 @@ Why this is logical:
 
 - raw friend count by itself is weak
 - fast friend accumulation on a new or isolated account is more meaningful
-- this is closer to an actual behavioral anomaly than the old placeholder
+- this is closer to an actual behavioral anomaly than a simple raw friend-count heuristic
 
 ## Game scoring
 
@@ -194,7 +194,7 @@ game_score =
   )
 ```
 
-This part of the system is stronger than the friend model because it is built from live public Roblox metadata rather than demo-only placeholders.
+This part of the system is stronger than the friend model because it is built from live public Roblox metadata and corroborating public discussion.
 
 ### The important game-scoring design change
 
@@ -326,19 +326,19 @@ Why this is logical:
 - weak generic language still stays weak here
 - if the search layer fails, the factor stays neutral rather than inventing concern
 
-## Game factor 5: detail-only wide web scan
+## Game factor 5: on-demand wide web analysis
 
 When Tavily is configured, direct game detail refreshes can run a wider article and forum search beyond Reddit and DevForum.
 
 When `GEMINI_API_KEY` is also configured, Gemma 4 runs as a second-pass classifier on those Tavily results.
 
-Important rollout boundary:
+Current operating boundary:
 
-- this currently runs only on direct game detail refresh
+- this analysis runs on direct game detail refreshes
 - it does not run during bulk profile refresh
-- it can add a bounded score bonus only in that direct-detail path
+- it can add a bounded score bonus only in that on-demand path
 
-Why this rollout is logical:
+Why this operating boundary is logical:
 
 - it avoids slowing the whole profile page down
 - it limits API spend
@@ -375,7 +375,7 @@ Why they still exist:
 - the UI should expose what was searched even when nothing corroborating was found
 - transparency is useful even when the contribution is zero
 
-## What still is not integrated into game scoring
+## Data outside current game scoring inputs
 
 Live game scoring still does not include:
 
@@ -460,7 +460,7 @@ The current model still has real constraints.
 - only public favorite and public created game associations are visible
 - private recent-play history is not available
 - metadata language can still miss context or overread it
-- external corroboration is limited to Reddit and DevForum right now
+- baseline external corroboration comes from Reddit and DevForum, with optional on-demand wide web analysis on game detail
 - strong approval is helpful but never proof of safety
 
 ### Overall limitation

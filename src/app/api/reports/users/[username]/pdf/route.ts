@@ -1,6 +1,6 @@
 import { slugify } from "@/lib/format";
-import { buildPreviewAssessment } from "@/lib/assessment";
-import { buildPhase0ReportPdf } from "@/lib/reports";
+import { buildUserAssessment } from "@/lib/assessment";
+import { buildReportPdf } from "@/lib/reports";
 
 export const dynamic = "force-dynamic";
 
@@ -10,8 +10,8 @@ export async function GET(
 ) {
   const { username } = await params;
   const decodedUsername = decodeURIComponent(username);
-  const assessment = await buildPreviewAssessment(decodedUsername);
-  const reportPdf = await buildPhase0ReportPdf(assessment);
+  const assessment = await buildUserAssessment(decodedUsername);
+  const reportPdf = await buildReportPdf(assessment);
   const url = new URL(request.url);
   const download = url.searchParams.get("download") === "1";
 

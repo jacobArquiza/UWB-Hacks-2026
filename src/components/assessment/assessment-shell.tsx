@@ -391,8 +391,8 @@ export function AssessmentShell({
         scope === "profile"
           ? "Profile snapshot refreshed."
           : scope === "friends"
-            ? "Friend preview refreshed."
-            : "Game preview refreshed.",
+            ? "Friend analysis refreshed."
+            : "Game analysis refreshed.",
       );
     } catch (error) {
       toast.error(
@@ -408,7 +408,7 @@ export function AssessmentShell({
       toast.message(
         authConfigured
           ? "Log in first, then save this child to your dashboard."
-          : "Add Auth0 env vars to activate saved-child login flows.",
+          : "Sign-in is unavailable right now.",
       );
       return;
     }
@@ -440,9 +440,7 @@ export function AssessmentShell({
 
       if (payload.storage === "local") {
         upsertSavedChild(payload.child);
-        toast.success(
-          "Saved in this browser. Add SUPABASE_SERVICE_ROLE_KEY to sync across devices.",
-        );
+        toast.success("Saved on this device.");
       } else {
         toast.success("Saved to your dashboard.");
       }
@@ -458,7 +456,7 @@ export function AssessmentShell({
   const reportPreviewBaseUrl = `/api/reports/users/${encodeURIComponent(
     assessment.profile.name,
   )}/pdf`;
-  const reportPreviewUrl = `${reportPreviewBaseUrl}?preview=${encodeURIComponent(
+  const reportPreviewUrl = `${reportPreviewBaseUrl}?v=${encodeURIComponent(
     assessment.lastAssessed,
   )}`;
   const reportDownloadUrl = `${reportPreviewBaseUrl}?download=1`;

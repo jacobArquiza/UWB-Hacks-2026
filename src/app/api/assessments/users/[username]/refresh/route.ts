@@ -1,4 +1,4 @@
-import { buildPreviewAssessment } from "@/lib/assessment";
+import { buildUserAssessment } from "@/lib/assessment";
 
 export const dynamic = "force-dynamic";
 
@@ -10,7 +10,7 @@ export async function POST(
 
   try {
     await request.json().catch(() => null);
-    const assessment = await buildPreviewAssessment(decodeURIComponent(username));
+    const assessment = await buildUserAssessment(decodeURIComponent(username));
 
     return Response.json({ assessment });
   } catch (error) {

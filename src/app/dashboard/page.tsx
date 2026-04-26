@@ -39,18 +39,14 @@ export default async function DashboardPage() {
                   "inline-flex rounded-[1.2rem] bg-primary text-primary-foreground hover:bg-primary/92",
                 )}
               >
-                Log in with Auth0
+                Continue to sign in
               </a>
             ) : (
               <div
                 id="auth0-setup"
                 className="rounded-[1.4rem] border border-dashed border-border bg-foreground/[0.03] p-4 text-muted-foreground"
               >
-                Auth0 env variables are not configured yet. Add them in
-                <code className="mx-1 rounded bg-foreground/[0.08] px-1.5 py-0.5 text-foreground">
-                  .env.local
-                </code>
-                to activate the real login flow.
+                Sign-in is unavailable right now. Please try again later.
               </div>
             )}
             <Link href="/" className="block text-foreground hover:text-foreground/76">

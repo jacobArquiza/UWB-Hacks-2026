@@ -1,4 +1,4 @@
-import { buildPreviewFriendById } from "@/lib/assessment";
+import { buildFriendAssessmentById } from "@/lib/assessment";
 
 export const dynamic = "force-dynamic";
 
@@ -9,7 +9,7 @@ export async function POST(
   const { friendId } = await params;
 
   try {
-    const friend = await buildPreviewFriendById(Number(friendId));
+    const friend = await buildFriendAssessmentById(Number(friendId));
     return Response.json({ friend });
   } catch (error) {
     return Response.json(

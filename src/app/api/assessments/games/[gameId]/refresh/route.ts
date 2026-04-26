@@ -1,4 +1,4 @@
-import { buildPreviewGameById } from "@/lib/assessment";
+import { buildGameAssessmentById } from "@/lib/assessment";
 import type { WideWebSearchMode } from "@/lib/types";
 
 export const dynamic = "force-dynamic";
@@ -18,7 +18,7 @@ export async function POST(
       const stream = new ReadableStream({
         async start(controller) {
           try {
-            const game = await buildPreviewGameById(Number(gameId), {
+            const game = await buildGameAssessmentById(Number(gameId), {
               wideWebSearchMode: payload?.wideWebSearchMode ?? "prefer-cache",
               onWideWebStage: (stage) => {
                 controller.enqueue(
@@ -52,7 +52,7 @@ export async function POST(
       });
     }
 
-    const game = await buildPreviewGameById(Number(gameId), {
+    const game = await buildGameAssessmentById(Number(gameId), {
       wideWebSearchMode: payload?.wideWebSearchMode ?? "prefer-cache",
     });
     return Response.json({ game });

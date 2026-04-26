@@ -50,7 +50,7 @@ export function SavedChildrenGrid({
   const description =
     storageMode === "supabase"
       ? "Saved profiles are synced to your account and follow you across devices."
-      : "Supabase persistence is not configured yet, so this dashboard is still reading from this browser only.";
+      : "Saved profiles are available on this device only right now.";
 
   async function handleDelete(child: SavedChildProfile) {
     setDeletingChildId(child.id);
@@ -58,7 +58,7 @@ export function SavedChildrenGrid({
     try {
       if (storageMode === "local") {
         removeSavedChild(child.id);
-        toast.success("Removed from this browser's saved children.");
+        toast.success("Removed from this device.");
         return;
       }
 

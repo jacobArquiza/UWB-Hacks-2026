@@ -34,7 +34,7 @@ const sections = [
   {
     title: "Third-party dependencies",
     body: [
-      "RoRadar depends on third-party providers and public data sources, including Roblox, Auth0, Supabase, Tavily, and Google Gemini / Gemma APIs when configured. RoRadar is not responsible for outages, policy changes, incomplete responses, or data quality issues originating from those providers.",
+      "RoRadar depends on third-party providers and public data sources, including Roblox and optional services used for sign-in, stored data, deeper web search, and automated evidence review. RoRadar is not responsible for outages, policy changes, incomplete responses, or data quality issues originating from those providers.",
       "RoRadar is independent and is not affiliated with Roblox Corporation.",
     ],
   },

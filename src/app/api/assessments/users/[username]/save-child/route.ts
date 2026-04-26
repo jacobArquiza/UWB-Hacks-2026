@@ -18,7 +18,7 @@ export async function POST(
     if (!isAuth0Configured) {
       return Response.json(
         {
-          error: "Auth0 is not configured yet.",
+          error: "Sign-in is unavailable right now.",
         },
         { status: 503 },
       );
@@ -46,7 +46,10 @@ export async function POST(
   } catch (error) {
     return Response.json(
       {
-        error: error instanceof Error ? error.message : "Could not save child.",
+        error:
+          error instanceof Error && error.message === "Authentication is required."
+            ? "Sign-in is required."
+            : "Could not save child.",
       },
       {
         status:

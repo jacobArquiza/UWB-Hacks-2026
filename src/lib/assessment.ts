@@ -212,12 +212,12 @@ function formatWideWebMatchSignals(
   return matches.flatMap((match) => {
     const [tavilySummary, gemmaSummary] = match.summary.split("; Gemma confirmed ");
     const signals = [
-      `Tavily Source: ${match.title} (${match.source})`,
-      `Tavily Match: ${tavilySummary}`,
+      `Source page: ${match.title} (${match.source})`,
+      `Matched concern: ${tavilySummary}`,
     ];
 
     if (gemmaSummary) {
-      signals.push(`Gemma 4 Analysis: Gemma confirmed ${gemmaSummary}`);
+      signals.push(`Evidence review: Confirmed ${gemmaSummary}`);
     }
 
     return signals;
@@ -482,7 +482,7 @@ function buildFriendFactors(
   return { factors, score };
 }
 
-export function buildPreviewFriendSummary(
+export function buildFriendAssessment(
   friend: RobloxUserProfile,
   context?: FriendGraphContext,
 ) {
@@ -691,24 +691,26 @@ async function buildGameFactors(
                 }`
               : "No corroborating article match"
             : wideWebSearchMode === "cache-only"
-              ? "No cached search yet"
+              ? "No saved search yet"
               : !wideWebSearchConfigured
-                ? "not configured"
+                ? "Unavailable"
                 : "Search unavailable",
       active: shouldLoadWideWebFactor && wideWebScan.available,
       contribution: wideWebContribution,
       observedSignals: wideWebSearchMode === "deferred"
         ? [
-            "Open this game detail to run the Tavily-backed article search.",
+            "Open this game detail to run a deeper article search.",
           ]
         : wideWebScan.available
           ? [
               wideWebScan.source === "cache"
-                ? `Cache: Supabase search snapshot from ${wideWebScan.fetchedAt ?? "an earlier refresh"}`
+                ? `Saved search from ${wideWebScan.fetchedAt ?? "an earlier refresh"}`
                 : `Search run: ${wideWebScan.fetchedAt ?? "just now"}`,
-              `Coverage: ${
+              `Search coverage: ${
                 wideWebScan.searchedSources.length
-                  ? wideWebScan.searchedSources.join(" + ")
+                  ? `${wideWebScan.searchedSources.length} source layer${
+                      wideWebScan.searchedSources.length === 1 ? "" : "s"
+                    } checked`
                   : "No source responded"
               }`,
               ...(wideWebScan.matches.length
@@ -717,41 +719,41 @@ async function buildGameFactors(
             ]
           : wideWebSearchMode === "cache-only"
             ? [
-                "Live Tavily searches are disabled in Settings for this browser.",
-                "No cached wide web result exists for this game yet. Use Refresh wide web in the modal to run and save one.",
+                "Live web searches are turned off in Settings on this device.",
+                "No saved wide web result exists for this game yet. Use Refresh wide web in the modal to run and save one.",
               ]
             : !wideWebSearchConfigured
               ? [
-                  "Add TAVILY_API_KEY and ENABLE_WIDE_WEB_GAME_SCAN=true to enable the wider article search.",
+                  "Deeper article search is unavailable right now.",
                 ]
               : [
                   wideWebScan.errorMessage ??
-                    "The Tavily article search was unavailable during this refresh, so the factor stayed neutral.",
+                    "The article search was unavailable during this refresh, so the factor stayed neutral.",
                 ],
       observedSources:
         shouldLoadWideWebFactor && wideWebScan.matches.length
           ? formatExternalCommunitySources(wideWebScan.matches.slice(0, 4))
           : [],
       note: wideWebSearchMode === "deferred"
-        ? "This deeper Tavily search currently runs only on direct game detail refresh so full profile refreshes stay fast and inexpensive."
+        ? "Wide web analysis runs from the game detail view so full-profile refreshes stay fast and cost-aware."
         : wideWebScan.available
           ? wideWebScan.source === "cache"
-            ? "This result came from the Supabase cache, so reopening the game detail does not spend new Tavily credits until you explicitly refresh the wide web search."
+            ? "This result came from a saved search, so reopening the game detail does not trigger a new live search unless you refresh it."
             : wideWebScan.persisted
-              ? "This Tavily-backed pass searches the wider web for grooming-adjacent or solicitation-style discussion about the game and writes the result into Supabase for future cached retrievals."
-              : "This Tavily-backed pass searched live, but the Supabase cache table is not available yet, so the result will only persist in memory until the migration is applied."
+              ? "This pass searches the wider web for grooming-adjacent or solicitation-style discussion about the game and saves the result for later reuse."
+              : "This pass searched live, but saved search storage is unavailable, so the result will only persist for the current server session."
           : wideWebSearchMode === "cache-only"
-            ? "The automatic Tavily call is disabled in Settings for this browser, but cached wide web results will still appear here whenever RoRadar already has one saved."
+            ? "Automatic live searches are disabled in Settings on this device, but saved wide web results will still appear here whenever RoRadar already has one."
             : !wideWebSearchConfigured
-              ? "Configure Tavily to add a wider article and forum search layer beyond Reddit and DevForum."
-              : "The Tavily-backed article search failed during this refresh, so the factor stayed neutral instead of inventing risk.",
+              ? "Deeper article search is unavailable right now."
+              : "The article search failed during this refresh, so the factor stayed neutral instead of inventing risk.",
     },
   ] satisfies RiskFactor[];
 
   return { factors, score };
 }
 
-export async function buildPreviewGameSummary(
+export async function buildGameAssessment(
   game: RobloxGameProfile,
   options: BuildGameScoringOptions = {},
 ) {
@@ -781,7 +783,7 @@ export async function buildPreviewGameSummary(
   } satisfies GameRiskSummary;
 }
 
-export async function buildPreviewAssessment(username: string) {
+export async function buildUserAssessment(username: string) {
   const profile = await getRobloxUserByUsername(username);
   const [friendProfiles, publicGames, ownerFriendIds] = await Promise.all([
     getRobloxFriends(profile.id),
@@ -807,7 +809,7 @@ export async function buildPreviewAssessment(username: string) {
   } satisfies FriendGraphContext;
 
   const allFriendSummaries = friendProfiles
-    .map((friend) => buildPreviewFriendSummary(friend, friendGraphContext))
+    .map((friend) => buildFriendAssessment(friend, friendGraphContext))
     .sort((left, right) => right.score - left.score);
 
   const friendSummaries = allFriendSummaries
@@ -815,7 +817,7 @@ export async function buildPreviewAssessment(username: string) {
     .slice(0, surfacedFriendLimit);
 
   const scoredGames = (
-    await Promise.all(publicGames.map((game) => buildPreviewGameSummary(game)))
+    await Promise.all(publicGames.map((game) => buildGameAssessment(game)))
   )
     .sort((left, right) => right.score - left.score);
 
@@ -839,16 +841,16 @@ export async function buildPreviewAssessment(username: string) {
     overallRiskScore,
     overallRiskLevel: getRiskLevel(overallRiskScore),
     summary:
-      "Phase 0 preview using live Roblox identity data, first-pass public friend graph analysis, public Roblox game associations, and lightweight external Reddit and DevForum corroboration.",
-    mode: "phase0-preview",
+      "Live Roblox identity data, public friend graph analysis, public Roblox game associations, and public external corroboration.",
+    mode: "live-assessment",
     lastAssessed: timestamp,
     friendsLastAssessed: timestamp,
     gamesLastAssessed: timestamp,
     notes: [
-      "Friend scoring now uses public account age, profile language, mutual-overlap, and friend-growth signals instead of the old placeholder velocity hash.",
+      "Friend scoring uses public account age, profile language, mutual-overlap, and friend-growth signals.",
       "Game checks now evaluate the user's public favorite games and public created experiences when Roblox exposes them.",
-      "Live game scoring now includes Reddit and DevForum corroboration. Tavily-backed wide web search is available on direct game detail refresh when configured, but not in bulk profile refresh yet.",
-      "Saved children sync to your account when Supabase persistence is configured; otherwise they fall back to this browser.",
+      "Game scoring includes public discussion corroboration. Optional deeper web analysis can be run from a game detail view when available.",
+      "Saved children sync to your account when account storage is available; otherwise they remain on this device.",
       "Overall profile score now averages the top three available friend and game signals instead of hinging on a single standout item.",
     ],
     highRiskFriends: friendSummaries,
@@ -858,17 +860,17 @@ export async function buildPreviewAssessment(username: string) {
   } satisfies UserAssessment;
 }
 
-export async function buildPreviewFriendById(friendId: number) {
+export async function buildFriendAssessmentById(friendId: number) {
   const friend = await getRobloxUserById(friendId);
-  return buildPreviewFriendSummary(friend);
+  return buildFriendAssessment(friend);
 }
 
-export async function buildPreviewGameById(
+export async function buildGameAssessmentById(
   gameId: number,
   options: BuildGameScoringOptions = {},
 ) {
   const game = await getRobloxGameByPlaceId(gameId);
-  return await buildPreviewGameSummary(game, {
+  return await buildGameAssessment(game, {
     wideWebSearchMode: options.wideWebSearchMode ?? "prefer-cache",
     onWideWebStage: options.onWideWebStage,
   });

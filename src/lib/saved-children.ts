@@ -1,10 +1,21 @@
 import type { SavedChildProfile } from "@/lib/types";
 
-const savedChildrenKey = "roradar.saved-children.phase0";
+const savedChildrenKey = "roradar.saved-children";
+const savedChildrenKeyPrefix = `${savedChildrenKey}.`;
 const emptySavedChildren = [] as SavedChildProfile[];
 
 let cachedRawValue: string | null = null;
 let cachedChildren: SavedChildProfile[] = emptySavedChildren;
+
+function findLegacySavedChildrenKey() {
+  if (typeof window === "undefined") {
+    return null;
+  }
+
+  return Object.keys(window.localStorage).find(
+    (key) => key.startsWith(savedChildrenKeyPrefix) && key !== savedChildrenKey,
+  );
+}
 
 export function readSavedChildren() {
   if (typeof window === "undefined") {
@@ -12,7 +23,12 @@ export function readSavedChildren() {
   }
 
   try {
-    const rawValue = window.localStorage.getItem(savedChildrenKey);
+    const rawValue =
+      window.localStorage.getItem(savedChildrenKey) ??
+      (() => {
+        const legacyKey = findLegacySavedChildrenKey();
+        return legacyKey ? window.localStorage.getItem(legacyKey) : null;
+      })();
 
     if (!rawValue) {
       cachedRawValue = null;
@@ -43,6 +59,10 @@ export function writeSavedChildren(children: SavedChildProfile[]) {
   }
 
   window.localStorage.setItem(savedChildrenKey, JSON.stringify(children));
+  const legacyKey = findLegacySavedChildrenKey();
+  if (legacyKey) {
+    window.localStorage.removeItem(legacyKey);
+  }
   window.dispatchEvent(new Event("roradar-saved-children-change"));
 }
 

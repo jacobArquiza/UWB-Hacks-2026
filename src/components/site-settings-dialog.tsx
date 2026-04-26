@@ -88,11 +88,11 @@ export function SiteSettingsDialog() {
               variant="outline"
               className="h-7 rounded-full border-border bg-foreground/[0.03] px-3 text-[0.66rem] tracking-[0.18em] uppercase"
             >
-              Saved locally
+              This device
             </Badge>
           </div>
           <DialogDescription className="max-w-xl text-sm leading-7 text-muted-foreground">
-            Control appearance and interaction preferences for this browser.
+            Control appearance and interaction preferences on this device.
           </DialogDescription>
         </DialogHeader>
 
@@ -156,7 +156,7 @@ export function SiteSettingsDialog() {
 
           <SettingCard
             title="Wide web safety search"
-            description="Control the Tavily-backed article scan on game detail refreshes. Disable it during testing if you want to avoid spending search credits."
+            description="Control deeper article searches on game detail refreshes. Turn them off if you want to avoid extra live searches."
           >
             <Button
               type="button"

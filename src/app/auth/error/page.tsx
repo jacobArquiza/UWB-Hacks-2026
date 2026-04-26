@@ -19,44 +19,42 @@ const troubleshootingByCause: Record<
   }
 > = {
   invalid_client: {
-    title: "Client credentials were rejected",
-    detail:
-      "Auth0 did not accept the app credentials during the code exchange.",
+    title: "Sign-in could not be completed",
+    detail: "The sign-in request was rejected before your session could finish.",
     checks: [
-      "Verify AUTH0_CLIENT_ID matches the RoRadar application in Auth0.",
-      "Reveal the current Client Secret in Auth0, paste it into .env.local as AUTH0_CLIENT_SECRET, and restart the dev server.",
-      "If you regenerated the secret recently, the old value will always fail here.",
+      "Return home and start a fresh sign-in attempt.",
+      "Avoid reusing an older sign-in tab or callback page.",
+      "If this keeps happening, contact support.",
     ],
   },
   unauthorized_client: {
-    title: "The Auth0 application is not allowed to finish this exchange",
+    title: "This sign-in request was not accepted",
     detail:
-      "This usually points to the application type or an application setting mismatch.",
+      "The sign-in service did not allow this request to complete.",
     checks: [
-      "Confirm the Auth0 Application Type is Regular Web Application.",
-      "Confirm Token Endpoint Authentication Method is client_secret_post.",
-      "Confirm the app you are editing is the same one referenced by AUTH0_CLIENT_ID.",
+      "Start a fresh sign-in attempt from the homepage.",
+      "Make sure you complete sign-in in the same tab you started from.",
+      "If this keeps happening, contact support.",
     ],
   },
   invalid_grant: {
-    title: "The authorization code was rejected",
+    title: "This sign-in link expired",
     detail:
-      "This usually means the callback code was stale, replayed, or generated for a slightly different redirect URI.",
+      "The sign-in session is no longer valid or no longer matches your current tab.",
     checks: [
-      "Retry the login from /auth/login instead of refreshing the callback page.",
-      "Make sure APP_BASE_URL is exactly http://localhost:3000.",
-      "Make sure the Auth0 Callback URL is exactly http://localhost:3000/auth/callback.",
-      "If you changed .env.local, stop and fully restart the dev server before retrying.",
+      "Return home and start sign-in again.",
+      "Avoid refreshing an older callback page.",
+      "If this keeps happening, contact support.",
     ],
   },
   access_denied: {
-    title: "Auth0 denied the token request",
+    title: "Sign-in was stopped",
     detail:
-      "A policy, action, or connection rule blocked the exchange after login.",
+      "Your account was not allowed to finish signing in.",
     checks: [
-      "Check Auth0 Dashboard > Monitoring > Logs for the failed transaction.",
-      "Look for Actions, Rules, or connection-specific restrictions on this application.",
-      "Retry with a basic email/password user to rule out a social/provider-specific issue.",
+      "Try signing in again.",
+      "If you believe you should have access, contact support.",
+      "If this keeps happening, try again later.",
     ],
   },
 };
@@ -74,7 +72,7 @@ export default async function AuthErrorPage({
     <section className="flex flex-1 items-center justify-center px-6 py-16">
       <div className="w-full max-w-3xl rounded-[2rem] border border-border bg-card/92 p-8 shadow-[0_24px_80px_rgba(0,0,0,0.2)] backdrop-blur-xl sm:p-10">
         <div className="inline-flex items-center rounded-full border border-[#f0b95f]/22 bg-[#f0b95f]/10 px-3 py-1 text-[0.68rem] font-semibold tracking-[0.22em] text-[#f0b95f] uppercase">
-          Auth callback failed
+          Sign-in issue
         </div>
 
         <h1 className="mt-5 font-heading text-3xl font-semibold tracking-tight text-foreground sm:text-[2.2rem]">
@@ -88,7 +86,7 @@ export default async function AuthErrorPage({
         <div className="mt-8 grid gap-4 rounded-[1.35rem] border border-border bg-foreground/[0.03] p-5 text-sm text-muted-foreground">
           <div className="flex items-center justify-between gap-3">
             <span className="tracking-[0.18em] text-muted-foreground uppercase">
-              SDK error
+              Error code
             </span>
             <span className="rounded-full border border-border bg-foreground/[0.04] px-3 py-1 font-medium text-foreground">
               {error}
@@ -96,7 +94,7 @@ export default async function AuthErrorPage({
           </div>
           <div className="flex items-center justify-between gap-3">
             <span className="tracking-[0.18em] text-muted-foreground uppercase">
-              OAuth cause
+              Request state
             </span>
             <span className="rounded-full border border-border bg-foreground/[0.04] px-3 py-1 font-medium text-foreground">
               {cause}
@@ -129,7 +127,7 @@ export default async function AuthErrorPage({
               "rounded-[0.95rem] bg-primary px-5 text-primary-foreground shadow-[0_12px_30px_rgba(40,80,255,0.18)] hover:bg-primary/92",
             )}
           >
-            Try Login Again
+            Try sign in again
           </a>
           <Link
             href="/"

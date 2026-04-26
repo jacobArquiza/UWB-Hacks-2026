@@ -1,13 +1,16 @@
 # RoRadar
 
-RoRadar is a parental awareness tool for Roblox safety. Phase 0 focuses on:
+RoRadar is a parental awareness tool for Roblox safety. It combines live Roblox profile data, public friend-graph analysis, public game analysis, and optional wider web corroboration into a reviewable parent report.
 
-- a polished landing page and player-report flow
-- live Roblox profile lookup for `KingRobloxsian20`
-- real game discovery from public favorite games and public created experiences
-- first-pass public friend graph scoring
-- real Auth0 wiring for login/logout
-- account-backed saved-child persistence when Supabase server credentials are configured
+## What it does
+
+- live Roblox profile lookup
+- public friend scoring using account age, profile language, mutual overlap, and friend-graph growth signals
+- public game scoring using favorite games, created experiences, Roblox metadata, and public corroboration
+- optional Tavily-backed wide web analysis with optional Gemma 4 validation on game detail refresh
+- Auth0 login and account-aware saved-child dashboards
+- Supabase-backed persistence with browser fallback when server credentials are unavailable
+- in-app PDF report viewing and download
 
 ## Run locally
 
@@ -37,25 +40,26 @@ npm run dev
 
 Open `http://localhost:3000`.
 
-## Phase 0 behavior
+## Product behavior
 
 - Landing search routes to `/user/[name]`.
-- User reports use live Roblox identity, public friend graph scoring, and preview game scoring.
-- Game risk cards come from public Roblox game associations instead of a seeded demo watchlist.
+- User assessments use live Roblox identity, public friend graph scoring, and public game scoring.
+- Game risk cards come from public Roblox game associations exposed through favorites and created experiences.
 - The friend and game sections can expand to show all scored public associations, not just the default `35%+` flagged subset.
 - Opening a game detail now triggers a deeper per-game refresh, including the
   optional Tavily-backed wide web scan and Gemma-backed evidence validation
   when configured.
 - `Save as Child` writes to Supabase when `SUPABASE_SERVICE_ROLE_KEY` is set.
 - Without that server key, the dashboard falls back to browser local storage.
-- `Download Report` exports a text snapshot. PDF generation is planned for P3.
+- `View Report` opens an in-app PDF viewer and supports direct PDF download.
 
 The current game scoring rubric is documented in [docs/game-scoring-rubric.md](docs/game-scoring-rubric.md).
 The full app scoring spec is documented in [Scoring.md](Scoring.md).
 
 ## Supabase
 
-The initial schema is in [supabase/migrations/20260425133000_phase0_foundation.sql](supabase/migrations/20260425133000_phase0_foundation.sql).
+The core schema is in [supabase/migrations/20260425133000_core_foundation.sql](supabase/migrations/20260425133000_core_foundation.sql).
+The persisted wide-web cache schema is in [supabase/migrations/20260426041000_game_wide_web_scans.sql](supabase/migrations/20260426041000_game_wide_web_scans.sql).
 
 It creates:
 

@@ -17,7 +17,7 @@ export async function DELETE(
     if (!isAuth0Configured) {
       return Response.json(
         {
-          error: "Auth0 is not configured yet.",
+          error: "Sign-in is unavailable right now.",
         },
         { status: 503 },
       );
@@ -35,7 +35,7 @@ export async function DELETE(
     if (!isSavedChildrenPersistenceConfigured) {
       return Response.json(
         {
-          error: "Supabase saved-child persistence is not configured.",
+          error: "Saved-child syncing is unavailable right now.",
         },
         { status: 503 },
       );
@@ -48,7 +48,10 @@ export async function DELETE(
   } catch (error) {
     return Response.json(
       {
-        error: error instanceof Error ? error.message : "Could not delete child.",
+        error:
+          error instanceof Error && error.message === "Authentication is required."
+            ? "Sign-in is required."
+            : "Could not delete child.",
       },
       {
         status:

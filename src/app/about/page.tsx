@@ -14,26 +14,26 @@ const pillars = [
   {
     title: "Audit Friends Lists",
     description:
-      "RoRadar reviews account-age patterns, username signals, and network behavior to surface friends that deserve a closer look.",
+      "RoRadar reviews account-age patterns, username signals, and possibly predatory network behavior to surface friends that deserve a closer look.",
     icon: Users,
   },
   {
     title: "Evaluate Game Safety",
     description:
-      "The platform combines Roblox metadata, community context, and risk thresholds to flag games with suspicious signals.",
+      "The platform combines Roblox metadata, community context, online discussion, and risk thresholds to flag games with suspicious signals.",
     icon: ShieldAlert,
   },
   {
     title: "Generate Parent Reports",
     description:
-      "Instead of raw platform data, parents get a readable summary that explains what was flagged and why it matters.",
+      "Parents get a readable summary that explains what was flagged and why it matters.",
     icon: FileText,
   },
 ];
 
 const methods = [
-  "Roblox profile and friend graph analysis",
-  "Game-level metadata and public association evaluation",
+  "Roblox profile and connection network analysis",
+  "Game-level metadata and public association",
   "Community-sourced warning signals and discussion context",
   "Human-readable reports built for parents, not moderators",
 ];
@@ -60,8 +60,9 @@ export default function AboutPage() {
                     A parental awareness tool for Roblox safety review.
                   </h1>
                   <p className="mt-6 max-w-3xl text-sm leading-8 text-muted-foreground sm:text-[0.98rem]">
-                    RoRadar was built around a simple problem: parents can see
-                    what their children are playing, but they usually cannot
+                    RoRadar was built around a critical problem: parents hear 
+                    all the time about the dangers of roblox, but they don't 
+                    know where the risk actually is. They need to be able to  
                     see whether those games, friend networks, or community
                     spaces have already raised safety concerns elsewhere.
                   </p>

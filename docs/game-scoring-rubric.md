@@ -1,15 +1,15 @@
 # Game Scoring Rubric
 
-This document describes the current Phase 0 game-risk scoring used by RoRadar.
+This document describes the live game-risk scoring used by RoRadar.
 
 ## Scope
 
 - The scorer only looks at Roblox games exposed through the user's public favorite games and public created experiences.
-- Private recent-play history is not available to this build.
+- Private recent-play history is not part of the current scoring inputs.
 - Reddit and DevForum corroboration are now part of the live scorer.
 - An optional Tavily-backed wide web scan can run on direct game detail refresh.
 - When `GEMINI_API_KEY` is configured, Gemma 4 validates those wide-web results before they count.
-- YouTube discussion checks are still not integrated.
+- YouTube discussion checks are outside the current scoring inputs.
 
 ## Output
 
@@ -148,19 +148,17 @@ Why this is logical:
 - absence of corroborating discussion stays neutral
 - if external search fails, the factor stays neutral instead of inventing risk
 
-## 5. Not yet integrated
-
-## 5. Direct-detail wide web scan
+## 5. On-demand wide web analysis
 
 When `TAVILY_API_KEY` is configured and `ENABLE_WIDE_WEB_GAME_SCAN=true`, RoRadar can run a wider article and forum search when an individual game detail is refreshed.
 
-Important rollout boundary:
+Current operating boundary:
 
-- this is currently detail-only
+- this analysis runs on direct game detail refresh
 - it is not part of bulk profile refresh yet
 - it can add a bounded score bonus on that direct detail refresh
 
-The reason for that rollout is pragmatic:
+The reason for that boundary is pragmatic:
 
 - it keeps full profile refreshes fast
 - it keeps API spend under control
@@ -174,9 +172,9 @@ The Tavily pass is still conservative:
 
 When Gemma 4 is configured, it then validates whether a candidate page is really about the exact target game instead of Roblox generally. That extra pass is especially useful for generic titles where raw keyword overlap can overcount.
 
-## 6. Not yet integrated
+## 6. Data outside current game scoring inputs
 
-The following are still absent from live game scoring:
+The following are outside live game scoring:
 
 - private recent-play history
 - YouTube discussion checks

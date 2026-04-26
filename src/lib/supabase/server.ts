@@ -25,8 +25,7 @@ export async function createSupabaseServerClient() {
               cookieStore.set(name, value, options);
             });
           } catch {
-            // This helper is prepared for future SSR usage. Phase 0 does not
-            // persist auth state through Supabase yet.
+            // Some server-rendered paths cannot write cookies directly.
           }
         },
       },

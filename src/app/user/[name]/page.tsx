@@ -2,7 +2,7 @@ import Link from "next/link";
 
 import { AssessmentShell } from "@/components/assessment/assessment-shell";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { buildPreviewAssessment } from "@/lib/assessment";
+import { buildUserAssessment } from "@/lib/assessment";
 import { getSessionSafe, isAuth0Configured } from "@/lib/auth0";
 import { isGemmaWideWebClassifierEnabled } from "@/lib/gemma";
 
@@ -20,7 +20,7 @@ export default async function UserPage({
 
   try {
     const [nextAssessment, session] = await Promise.all([
-      buildPreviewAssessment(username),
+      buildUserAssessment(username),
       getSessionSafe(),
     ]);
     assessment = nextAssessment;
@@ -42,8 +42,8 @@ export default async function UserPage({
           </CardHeader>
           <CardContent className="space-y-4 px-6 pb-6 text-sm leading-7 text-muted-foreground">
             <p>
-              Phase 0 is wired against live Roblox user lookup, so this usually
-              means the username does not exist or Roblox declined the request.
+              RoRadar uses live Roblox user lookup, so this usually means the
+              username does not exist or Roblox declined the request.
             </p>
             <Link href="/" className="text-foreground hover:text-foreground/76">
               Back to search

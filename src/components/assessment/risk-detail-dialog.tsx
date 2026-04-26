@@ -169,7 +169,7 @@ function FactorRow({
                     )}
                   />
                 </span>
-                Running Tavily Search
+                Searching the web
               </div>
               {gemmaWideWebConfigured ? (
                 <div
@@ -191,7 +191,7 @@ function FactorRow({
                       )}
                     />
                   </span>
-                  Running Gemma 4 Analysis
+                  Reviewing evidence
                 </div>
               ) : null}
             </div>
