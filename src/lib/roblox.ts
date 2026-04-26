@@ -294,7 +294,9 @@ function mapGameListEntryToSeed(
   } satisfies RobloxGameSeedEntry;
 }
 
-async function hydrateRobloxGames(entries: RobloxGameSeedEntry[]) {
+async function hydrateRobloxGames(
+  entries: RobloxGameSeedEntry[],
+): Promise<RobloxGameProfile[]> {
   const dedupedEntries = Array.from(
     entries
       .reduce((map, entry) => {
@@ -344,15 +346,17 @@ async function hydrateRobloxGames(entries: RobloxGameSeedEntry[]) {
         { headers: {} },
       ).catch(() => ({ data: [] })),
       Promise.all(
-        universeIds.map(async (universeId) => [
-          universeId,
-          await robloxFetch<RobloxPrivateServersResponse>(
-            `https://games.roblox.com/v1/private-servers/enabled-in-universe/${universeId}`,
-            { headers: {} },
-          )
-            .then((payload) => payload.privateServersEnabled)
-            .catch(() => false),
-        ]),
+        universeIds.map(async (universeId) =>
+          [
+            universeId,
+            await robloxFetch<RobloxPrivateServersResponse>(
+              `https://games.roblox.com/v1/private-servers/enabled-in-universe/${universeId}`,
+              { headers: {} },
+            )
+              .then((payload) => payload.privateServersEnabled)
+              .catch(() => false),
+          ] as const,
+        ),
       ),
     ]);
 
@@ -365,7 +369,7 @@ async function hydrateRobloxGames(entries: RobloxGameSeedEntry[]) {
   const iconsByUniverseId = new Map(
     iconPayload.data.map((icon) => [icon.targetId, icon.imageUrl]),
   );
-  const privateServersByUniverseId = new Map(privateServerFlags);
+  const privateServersByUniverseId = new Map<number, boolean>(privateServerFlags);
 
   return dedupedEntries.map((entry) => {
     const details = detailsByUniverseId.get(entry.universeId);
@@ -489,7 +493,10 @@ async function getRobloxGameSeedByPlaceId(placeId: number) {
   } satisfies RobloxGameSeedEntry;
 }
 
-export async function getRobloxGamesForUser(userId: number, limit = 8) {
+export async function getRobloxGamesForUser(
+  userId: number,
+  limit = 8,
+): Promise<RobloxGameProfile[]> {
   const [favoriteGamesPayload, createdGamesPayload] = await Promise.all([
     robloxFetch<RobloxUserGameListResponse>(
       `https://games.roblox.com/v2/users/${userId}/favorite/games`,
@@ -515,7 +522,9 @@ export async function getRobloxGamesForUser(userId: number, limit = 8) {
   return hydratedGames.slice(0, limit);
 }
 
-export async function getRobloxGameByPlaceId(placeId: number) {
+export async function getRobloxGameByPlaceId(
+  placeId: number,
+): Promise<RobloxGameProfile> {
   const gameSeed = await getRobloxGameSeedByPlaceId(placeId);
   const [game] = await hydrateRobloxGames([gameSeed]);
 

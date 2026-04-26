@@ -854,7 +854,7 @@ export async function getWideWebRiskScan(
     forceRefresh?: boolean;
     onStage?: (stage: "tavily" | "gemma") => void;
   } = {},
-) {
+): Promise<WideWebRiskScanResult> {
   const allowLiveSearch = options.allowLiveSearch ?? true;
   const forceRefresh = options.forceRefresh ?? false;
   const cacheKey = buildWideWebCacheKey(game.placeId);
@@ -913,7 +913,7 @@ export async function getWideWebRiskScan(
     } satisfies WideWebRiskScanResult;
   }
 
-  const promise = scanWideWeb(game.name, {
+  const promise: Promise<WideWebRiskScanResult> = scanWideWeb(game.name, {
     onStage: options.onStage,
   })
     .then(async ({ matches, searchedSources }) => {

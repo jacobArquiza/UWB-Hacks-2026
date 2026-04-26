@@ -12,10 +12,13 @@ export async function GET(
   const decodedUsername = decodeURIComponent(username);
   const assessment = await buildUserAssessment(decodedUsername);
   const reportPdf = await buildReportPdf(assessment);
+  const reportBuffer = new ArrayBuffer(reportPdf.byteLength);
+  new Uint8Array(reportBuffer).set(reportPdf);
+  const reportBody = new Blob([reportBuffer], { type: "application/pdf" });
   const url = new URL(request.url);
   const download = url.searchParams.get("download") === "1";
 
-  return new Response(reportPdf, {
+  return new Response(reportBody, {
     headers: {
       "cache-control": "no-store",
       "content-disposition": `${download ? "attachment" : "inline"}; filename="${slugify(decodedUsername)}-roradar-report.pdf"`,
