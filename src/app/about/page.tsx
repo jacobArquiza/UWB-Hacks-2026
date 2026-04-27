@@ -44,11 +44,108 @@ const guardrails = [
   "The product is independent and is not affiliated with Roblox Corporation.",
 ];
 
+function getInitials(name: string) {
+  return name
+    .split(" ")
+    .filter(Boolean)
+    .slice(0, 2)
+    .map((part) => part[0]?.toUpperCase() ?? "")
+    .join("");
+}
+
+const founders = [
+  {
+    name: "Jacob M. Arquiza",
+    role: "Technical Lead",
+    blurb:
+      "I'm an aspiring SWE passionate about creating clean, responsive, and user-friendly web experiences through intuitive design and efficient code. RoRadar gave me the opportunity to collaborate with others and bring that passion to life.",
+    linkedin: "https://www.linkedin.com/in/jacob-arquiza/",
+    avatarUrl: "",
+  },
+  {
+    name: "Arianajoy G. De Castro",
+    role: "Project Lead",
+    blurb:
+      "I'm an aspiring SWE and PM. I find fulfillment in creating things, and expressing that through programming and managing technology projects is how I want to make an impact on the world. RoRadar is only the first step in my journey to make tools and resources that help everyone live a little better.",
+    linkedin: "https://www.linkedin.com/in/arianajoy-de-castro-6732112b8/",
+    avatarUrl: "",
+  },
+  {
+    name: "Renee W. Chiang",
+    role: "Research Lead",
+    blurb:
+       "I'm an aspiring PM who's ultimate goal is to make the world a little less scary for the next generation. RoRadar is one of my first projects intended to spark more conversation about how children interact online.",
+    linkedin: "https://www.linkedin.com/in/reneewchiang/",
+    avatarUrl: "",
+  },
+];
+
 export default function AboutPage() {
   return (
     <div className="flex flex-1 flex-col">
       <section className="px-4 pb-14 pt-14 sm:px-6 sm:pb-18 sm:pt-18">
         <div className="mx-auto flex w-full max-w-[96rem] flex-col gap-8">
+          <Card className="overflow-hidden rounded-[2.35rem] border border-primary/18 bg-[linear-gradient(180deg,rgba(40,80,255,0.1)_0%,rgba(26,29,36,0.94)_18%,rgba(20,23,31,0.98)_100%)] shadow-[0_34px_100px_rgba(0,0,0,0.18)]">
+            <CardContent className="px-7 py-8 sm:px-10 sm:py-10 lg:px-12 lg:py-12">
+              <div className="grid gap-8">
+                <div className="max-w-4xl">
+                  <p className="text-[0.72rem] font-medium tracking-[0.34em] text-primary uppercase">
+                    How RoRadar Was Born
+                  </p>
+                  <h2 className="mt-5 font-heading text-[2rem] leading-[1.02] font-semibold tracking-[-0.05em] text-foreground sm:text-[2.55rem] lg:text-[3.35rem]">
+                    Add the origin story that gives this product its human
+                    context.
+                  </h2>
+                  <p className="mt-6 text-sm leading-8 text-foreground/84 sm:text-[0.98rem]">
+                    Replace this paragraph with the story of how your team saw
+                    the problem, what personal or observed moment made it feel
+                    urgent, and why RoRadar became the product you chose to
+                    build.
+                  </p>
+                  <p className="mt-4 text-sm leading-8 text-muted-foreground sm:text-[0.98rem]">
+                    This section is designed to be easy to personalize. You can
+                    talk about the original idea, what surprised you during
+                    research, and what made the product worth finishing.
+                  </p>
+                </div>
+
+                <div className="grid gap-4 md:grid-cols-3">
+                  {founders.map((founder) => (
+                    <a
+                      key={founder.name}
+                      href={founder.linkedin}
+                      target="_blank"
+                      rel="noreferrer"
+                      className="group rounded-[1.7rem] border border-primary/14 bg-primary/[0.06] px-5 py-6 text-center transition-all duration-300 ease-out hover:border-primary/34 hover:bg-primary/[0.08] hover:shadow-[0_20px_44px_rgba(40,80,255,0.12)]"
+                    >
+                      {founder.avatarUrl ? (
+                        <span
+                          role="img"
+                          aria-label={founder.name}
+                          className="mx-auto block h-24 w-24 rounded-full border border-primary/24 bg-cover bg-center bg-no-repeat transition-colors group-hover:border-primary/46"
+                          style={{ backgroundImage: `url("${founder.avatarUrl}")` }}
+                        />
+                      ) : (
+                        <div className="mx-auto flex h-24 w-24 items-center justify-center rounded-full border border-dashed border-primary/28 bg-foreground/[0.03] text-lg font-semibold tracking-[0.08em] text-primary uppercase transition-colors group-hover:border-primary/46">
+                          {getInitials(founder.name)}
+                        </div>
+                      )}
+                      <h3 className="mt-5 font-heading text-[1.35rem] font-semibold tracking-[-0.03em] text-foreground">
+                        {founder.name}
+                      </h3>
+                      <p className="mt-2 text-[0.72rem] font-medium tracking-[0.22em] text-primary uppercase">
+                        {founder.role}
+                      </p>
+                      <p className="mt-4 text-sm leading-7 text-muted-foreground">
+                        {founder.blurb}
+                      </p>
+                    </a>
+                  ))}
+                </div>
+              </div>
+            </CardContent>
+          </Card>
+
           <Card className="overflow-hidden rounded-[2.25rem] border border-border bg-card/92 shadow-[0_30px_90px_rgba(0,0,0,0.16)]">
             <CardContent className="px-7 py-8 sm:px-10 sm:py-11 lg:px-12 lg:py-14">
               <div className="grid gap-10 lg:grid-cols-[minmax(0,1.1fr)_22rem] lg:items-end">

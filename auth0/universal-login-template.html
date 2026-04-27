@@ -1,0 +1,758 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    {%- auth0:head -%}
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <meta name="color-scheme" content="dark light" />
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link
+      href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap"
+      rel="stylesheet"
+    />
+    <title>{{ prompt.screen.texts.pageTitle }} | RoRadar</title>
+    <style>
+      :root {
+        color-scheme: dark;
+        --rr-bg-top: #171a21;
+        --rr-bg-bottom: #11141b;
+        --rr-card: rgba(26, 29, 36, 0.88);
+        --rr-card-strong: rgba(23, 26, 33, 0.96);
+        --rr-card-soft: rgba(255, 255, 255, 0.03);
+        --rr-border: rgba(255, 255, 255, 0.08);
+        --rr-border-strong: rgba(255, 255, 255, 0.14);
+        --rr-text: #f3f3f4;
+        --rr-text-soft: #a6a8ad;
+        --rr-primary: #2850ff;
+        --rr-primary-soft: rgba(40, 80, 255, 0.16);
+        --rr-success: #59d89d;
+        --rr-shadow: 0 28px 90px rgba(0, 0, 0, 0.28);
+        --rr-glow-a: rgba(63, 92, 255, 0.14);
+        --rr-glow-b: rgba(255, 255, 255, 0.04);
+        --rr-glow-c: rgba(73, 104, 255, 0.09);
+      }
+
+      * {
+        box-sizing: border-box;
+      }
+
+      html,
+      body {
+        min-height: 100%;
+      }
+
+      body {
+        margin: 0;
+        font-family:
+          "Inter",
+          ui-sans-serif,
+          system-ui,
+          -apple-system,
+          BlinkMacSystemFont,
+          "Segoe UI",
+          sans-serif;
+        background:
+          radial-gradient(circle at top, var(--rr-glow-a), transparent 26rem),
+          linear-gradient(180deg, var(--rr-bg-top) 0%, var(--rr-bg-bottom) 100%);
+        color: var(--rr-text);
+        overflow-x: hidden;
+      }
+
+      body::before,
+      body::after {
+        content: "";
+        position: fixed;
+        inset: 0;
+        pointer-events: none;
+        z-index: 0;
+      }
+
+      body::before {
+        background:
+          radial-gradient(circle at 14% 18%, var(--rr-glow-c), transparent 16rem),
+          radial-gradient(circle at 80% 0%, var(--rr-glow-b), transparent 14rem);
+        filter: blur(16px);
+      }
+
+      body::after {
+        opacity: 0.42;
+        background-image:
+          linear-gradient(
+            to right,
+            transparent 0,
+            transparent calc(25% - 0.5px),
+            rgba(255, 255, 255, 0.04) calc(25% - 0.5px),
+            rgba(255, 255, 255, 0.04) calc(25% + 0.5px),
+            transparent calc(25% + 0.5px),
+            transparent calc(50% - 0.5px),
+            rgba(255, 255, 255, 0.04) calc(50% - 0.5px),
+            rgba(255, 255, 255, 0.04) calc(50% + 0.5px),
+            transparent calc(50% + 0.5px),
+            transparent calc(75% - 0.5px),
+            rgba(255, 255, 255, 0.04) calc(75% - 0.5px),
+            rgba(255, 255, 255, 0.04) calc(75% + 0.5px),
+            transparent calc(75% + 0.5px)
+          ),
+          linear-gradient(
+            to bottom,
+            transparent 0,
+            transparent calc(24% - 0.5px),
+            rgba(255, 255, 255, 0.04) calc(24% - 0.5px),
+            rgba(255, 255, 255, 0.04) calc(24% + 0.5px),
+            transparent calc(24% + 0.5px),
+            transparent calc(50% - 0.5px),
+            rgba(255, 255, 255, 0.04) calc(50% - 0.5px),
+            rgba(255, 255, 255, 0.04) calc(50% + 0.5px),
+            transparent calc(50% + 0.5px),
+            transparent calc(76% - 0.5px),
+            rgba(255, 255, 255, 0.04) calc(76% - 0.5px),
+            rgba(255, 255, 255, 0.04) calc(76% + 0.5px),
+            transparent calc(76% + 0.5px)
+          );
+      }
+
+      .rr-page {
+        position: relative;
+        z-index: 1;
+        min-height: 100vh;
+        padding: 28px;
+      }
+
+      .rr-shell {
+        position: relative;
+        max-width: 1380px;
+        margin: 0 auto;
+        min-height: calc(100vh - 56px);
+        display: grid;
+        grid-template-columns: minmax(0, 1.08fr) minmax(360px, 500px);
+        gap: 32px;
+        align-items: stretch;
+      }
+
+      .rr-nav {
+        position: absolute;
+        top: 0;
+        left: 0;
+        right: 0;
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        gap: 16px;
+        padding: 18px 22px;
+        border: 1px solid var(--rr-border);
+        border-radius: 28px;
+        background: rgba(26, 29, 36, 0.88);
+        backdrop-filter: blur(18px);
+        box-shadow: 0 14px 44px rgba(0, 0, 0, 0.16);
+      }
+
+      .rr-brand-lockup {
+        display: inline-flex;
+        align-items: center;
+        gap: 12px;
+        min-width: 0;
+      }
+
+      .rr-brand-mark {
+        width: 30px;
+        height: 30px;
+        border-radius: 10px;
+        flex-shrink: 0;
+      }
+
+      .rr-brand-wordmark {
+        height: 26px;
+        width: auto;
+        display: block;
+      }
+
+      .rr-nav-meta {
+        display: inline-flex;
+        align-items: center;
+        gap: 12px;
+        color: var(--rr-text-soft);
+        font-size: 0.92rem;
+      }
+
+      .rr-nav-chip {
+        display: inline-flex;
+        align-items: center;
+        gap: 8px;
+        padding: 0.6rem 0.95rem;
+        border-radius: 999px;
+        border: 1px solid var(--rr-border);
+        background: rgba(255, 255, 255, 0.03);
+      }
+
+      .rr-main {
+        display: contents;
+      }
+
+      .rr-story {
+        display: flex;
+        align-items: center;
+        padding: 118px 18px 18px;
+      }
+
+      .rr-story-card {
+        width: 100%;
+        min-height: min(760px, calc(100vh - 130px));
+        border-radius: 38px;
+        border: 1px solid var(--rr-border);
+        background:
+          radial-gradient(circle at top left, rgba(40, 80, 255, 0.12), transparent 18rem),
+          linear-gradient(180deg, rgba(26, 29, 36, 0.86) 0%, rgba(17, 20, 27, 0.98) 100%);
+        backdrop-filter: blur(18px);
+        box-shadow: var(--rr-shadow);
+        padding: 44px;
+        display: flex;
+        flex-direction: column;
+        justify-content: space-between;
+        overflow: hidden;
+        position: relative;
+      }
+
+      .rr-story-card::after {
+        content: "";
+        position: absolute;
+        right: -90px;
+        bottom: -90px;
+        width: 320px;
+        height: 320px;
+        border-radius: 50%;
+        background: radial-gradient(circle, rgba(40, 80, 255, 0.22), transparent 62%);
+        pointer-events: none;
+      }
+
+      .rr-kicker {
+        display: inline-flex;
+        align-items: center;
+        gap: 10px;
+        color: #9db2ff;
+        text-transform: uppercase;
+        letter-spacing: 0.28em;
+        font-weight: 700;
+        font-size: 0.7rem;
+      }
+
+      .rr-dot {
+        width: 7px;
+        height: 7px;
+        border-radius: 999px;
+        background: var(--rr-success);
+        box-shadow: 0 0 0 8px rgba(89, 216, 157, 0.08);
+      }
+
+      .rr-headline {
+        margin: 26px 0 0;
+        max-width: 10.5ch;
+        font-size: clamp(3rem, 5vw, 5.5rem);
+        line-height: 0.96;
+        letter-spacing: -0.06em;
+        font-weight: 800;
+      }
+
+      .rr-subcopy {
+        margin: 22px 0 0;
+        max-width: 34rem;
+        font-size: 1.02rem;
+        line-height: 1.8;
+        color: var(--rr-text-soft);
+      }
+
+      .rr-feature-grid {
+        display: grid;
+        grid-template-columns: repeat(3, minmax(0, 1fr));
+        gap: 14px;
+        margin-top: 34px;
+      }
+
+      .rr-feature-card {
+        padding: 18px 18px 16px;
+        border-radius: 24px;
+        border: 1px solid var(--rr-border);
+        background: rgba(255, 255, 255, 0.03);
+        backdrop-filter: blur(8px);
+      }
+
+      .rr-feature-card strong {
+        display: block;
+        font-size: 0.95rem;
+        font-weight: 600;
+        color: var(--rr-text);
+      }
+
+      .rr-feature-card span {
+        display: block;
+        margin-top: 8px;
+        color: var(--rr-text-soft);
+        font-size: 0.9rem;
+        line-height: 1.65;
+      }
+
+      .rr-story-footer {
+        display: flex;
+        flex-wrap: wrap;
+        align-items: center;
+        gap: 18px;
+        margin-top: 38px;
+        color: var(--rr-text-soft);
+        font-size: 0.9rem;
+      }
+
+      .rr-proof {
+        display: inline-flex;
+        align-items: center;
+        gap: 10px;
+        padding: 0.95rem 1.15rem;
+        border-radius: 18px;
+        border: 1px solid var(--rr-border);
+        background: rgba(255, 255, 255, 0.028);
+      }
+
+      .rr-proof-icon {
+        width: 34px;
+        height: 34px;
+        border-radius: 12px;
+        display: grid;
+        place-items: center;
+        background: var(--rr-primary-soft);
+        color: #ced8ff;
+        font-weight: 700;
+      }
+
+      .rr-auth-panel {
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        padding: 118px 10px 18px 0;
+      }
+
+      .rr-auth-frame {
+        width: 100%;
+        min-height: min(760px, calc(100vh - 130px));
+        border-radius: 38px;
+        border: 1px solid var(--rr-border-strong);
+        background:
+          linear-gradient(180deg, rgba(26, 29, 36, 0.95) 0%, rgba(18, 20, 26, 0.98) 100%);
+        backdrop-filter: blur(20px);
+        box-shadow: var(--rr-shadow);
+        padding: 34px 32px;
+        display: flex;
+        flex-direction: column;
+        justify-content: center;
+        position: relative;
+        overflow: hidden;
+      }
+
+      .rr-auth-frame::before {
+        content: "";
+        position: absolute;
+        inset: 0;
+        pointer-events: none;
+        background:
+          linear-gradient(180deg, rgba(255, 255, 255, 0.05), transparent 22%),
+          radial-gradient(circle at 0% 0%, rgba(40, 80, 255, 0.16), transparent 28%);
+      }
+
+      .rr-auth-topline {
+        position: absolute;
+        top: 28px;
+        left: 32px;
+        right: 32px;
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        gap: 16px;
+        z-index: 1;
+      }
+
+      .rr-auth-badge,
+      .rr-help-link {
+        display: inline-flex;
+        align-items: center;
+        gap: 8px;
+        padding: 0.65rem 0.9rem;
+        border-radius: 999px;
+        border: 1px solid var(--rr-border);
+        background: rgba(255, 255, 255, 0.035);
+        color: var(--rr-text-soft);
+        text-decoration: none;
+        font-size: 0.74rem;
+        font-weight: 600;
+        letter-spacing: 0.18em;
+        text-transform: uppercase;
+      }
+
+      .rr-widget-shell {
+        position: relative;
+        z-index: 1;
+        width: 100%;
+        max-width: 410px;
+        margin: 0 auto;
+      }
+
+      .rr-widget-header {
+        margin-bottom: 22px;
+      }
+
+      .rr-widget-header h1 {
+        margin: 0;
+        font-size: clamp(2rem, 3.1vw, 2.8rem);
+        line-height: 0.98;
+        letter-spacing: -0.05em;
+        font-weight: 800;
+      }
+
+      .rr-widget-header p {
+        margin: 14px 0 0;
+        font-size: 0.98rem;
+        line-height: 1.7;
+        color: var(--rr-text-soft);
+      }
+
+      .rr-widget-card {
+        padding: 24px;
+        border-radius: 28px;
+        border: 1px solid var(--rr-border);
+        background: rgba(255, 255, 255, 0.03);
+        box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.04);
+      }
+
+      .rr-widget {
+        display: grid;
+        gap: 14px;
+      }
+
+      .rr-widget *,
+      .rr-widget *::before,
+      .rr-widget *::after {
+        font-family: inherit;
+      }
+
+      .rr-widget :is(input, select, textarea) {
+        width: 100%;
+        min-height: 52px;
+        border-radius: 18px;
+        border: 1px solid rgba(255, 255, 255, 0.09);
+        background: rgba(255, 255, 255, 0.035);
+        color: var(--rr-text);
+        padding: 0.95rem 1rem;
+        box-shadow: none;
+        outline: none;
+        transition:
+          border-color 180ms ease,
+          box-shadow 180ms ease,
+          background 180ms ease;
+      }
+
+      .rr-widget :is(input, select, textarea)::placeholder {
+        color: rgba(166, 168, 173, 0.76);
+      }
+
+      .rr-widget :is(input, select, textarea):focus {
+        border-color: rgba(40, 80, 255, 0.58);
+        background: rgba(255, 255, 255, 0.045);
+        box-shadow: 0 0 0 4px rgba(40, 80, 255, 0.14);
+      }
+
+      .rr-widget :is(button, input[type="submit"], [role="button"]) {
+        min-height: 52px;
+        border-radius: 18px;
+        border: 1px solid transparent;
+        background: linear-gradient(180deg, #355bff 0%, #2850ff 100%);
+        color: #f8fbff;
+        font-weight: 700;
+        letter-spacing: 0.01em;
+        box-shadow: 0 14px 30px rgba(40, 80, 255, 0.22);
+        transition:
+          transform 180ms ease,
+          filter 180ms ease,
+          opacity 180ms ease;
+      }
+
+      .rr-widget :is(button, input[type="submit"], [role="button"]):hover {
+        filter: brightness(1.04);
+        transform: translateY(-1px);
+      }
+
+      .rr-widget a {
+        color: #c7d3ff;
+        text-decoration: none;
+      }
+
+      .rr-widget a:hover {
+        color: #ffffff;
+      }
+
+      .rr-widget label,
+      .rr-widget legend,
+      .rr-widget small,
+      .rr-widget p,
+      .rr-widget span,
+      .rr-widget div {
+        color: inherit;
+      }
+
+      .rr-widget ul,
+      .rr-widget ol {
+        margin: 0;
+        padding-left: 1.1rem;
+        color: var(--rr-text-soft);
+      }
+
+      .rr-widget hr {
+        border: 0;
+        border-top: 1px solid var(--rr-border);
+        margin: 6px 0;
+      }
+
+      .rr-widget img {
+        max-width: 100%;
+      }
+
+      .rr-auth-note {
+        margin-top: 16px;
+        font-size: 0.82rem;
+        line-height: 1.7;
+        color: var(--rr-text-soft);
+      }
+
+      .rr-auth-note strong {
+        color: var(--rr-text);
+        font-weight: 600;
+      }
+
+      @media (max-width: 1180px) {
+        .rr-shell {
+          grid-template-columns: 1fr 420px;
+        }
+
+        .rr-feature-grid {
+          grid-template-columns: 1fr;
+        }
+      }
+
+      @media (max-width: 980px) {
+        .rr-page {
+          padding: 18px;
+        }
+
+        .rr-shell {
+          min-height: auto;
+          display: block;
+        }
+
+        .rr-nav {
+          position: relative;
+          margin-bottom: 18px;
+          padding: 16px 18px;
+        }
+
+        .rr-nav-meta {
+          display: none;
+        }
+
+        .rr-story,
+        .rr-auth-panel {
+          padding: 0;
+        }
+
+        .rr-story-card,
+        .rr-auth-frame {
+          min-height: auto;
+        }
+
+        .rr-story-card {
+          margin-bottom: 18px;
+          padding: 30px 24px;
+        }
+
+        .rr-headline {
+          max-width: 14ch;
+          font-size: clamp(2.6rem, 11vw, 4rem);
+        }
+
+        .rr-auth-frame {
+          padding: 78px 20px 24px;
+        }
+
+        .rr-auth-topline {
+          top: 20px;
+          left: 20px;
+          right: 20px;
+        }
+      }
+
+      @media (max-width: 640px) {
+        .rr-page {
+          padding: 12px;
+        }
+
+        .rr-nav,
+        .rr-story-card,
+        .rr-auth-frame,
+        .rr-widget-card {
+          border-radius: 24px;
+        }
+
+        .rr-story-card {
+          padding: 24px 20px;
+        }
+
+        .rr-brand-wordmark {
+          height: 23px;
+        }
+
+        .rr-feature-grid {
+          margin-top: 26px;
+        }
+
+        .rr-proof {
+          width: 100%;
+        }
+
+        .rr-auth-frame {
+          padding: 74px 16px 18px;
+        }
+
+        .rr-auth-topline {
+          position: relative;
+          inset: auto;
+          margin-bottom: 14px;
+          justify-content: flex-start;
+          flex-wrap: wrap;
+        }
+
+        .rr-widget-header {
+          margin-bottom: 18px;
+        }
+
+        .rr-widget-card {
+          padding: 18px;
+        }
+      }
+    </style>
+  </head>
+  <body>
+    <div class="rr-page">
+      <div class="rr-shell">
+        <nav class="rr-nav" aria-label="RoRadar sign in">
+          <div class="rr-brand-lockup">
+            <img
+              class="rr-brand-mark"
+              src="https://roradar.vercel.app/branding/roradar-mark.png"
+              alt=""
+            />
+            <img
+              class="rr-brand-wordmark"
+              src="https://roradar.vercel.app/branding/roradar-wordmark.png"
+              alt="RoRadar"
+            />
+          </div>
+
+          <div class="rr-nav-meta">
+            <span class="rr-nav-chip">Parental safety review</span>
+            <span class="rr-nav-chip">Live Roblox account screening</span>
+          </div>
+        </nav>
+
+        <main class="rr-main">
+          <section class="rr-story" aria-label="RoRadar overview">
+            <div class="rr-story-card">
+              <div>
+                <div class="rr-kicker">
+                  <span class="rr-dot" aria-hidden="true"></span>
+                  RoRadar access
+                </div>
+                <h1 class="rr-headline">
+                  Review the account before the risk spreads.
+                </h1>
+                <p class="rr-subcopy">
+                  RoRadar gives parents a readable Roblox safety snapshot built
+                  from public friend signals, game risk scoring, and wider
+                  corroboration when needed.
+                </p>
+
+                <div class="rr-feature-grid" aria-label="RoRadar features">
+                  <div class="rr-feature-card">
+                    <strong>Audit friends</strong>
+                    <span>
+                      Surface suspicious public friend profiles using account
+                      age, graph overlap, and profile-language signals.
+                    </span>
+                  </div>
+                  <div class="rr-feature-card">
+                    <strong>Review games</strong>
+                    <span>
+                      Score public game associations and flag social or
+                      roleplay-heavy environments that deserve a closer look.
+                    </span>
+                  </div>
+                  <div class="rr-feature-card">
+                    <strong>Export reports</strong>
+                    <span>
+                      Keep a readable PDF trail for later review, comparison,
+                      or parent follow-up decisions.
+                    </span>
+                  </div>
+                </div>
+              </div>
+
+              <div class="rr-story-footer">
+                <div class="rr-proof">
+                  <div class="rr-proof-icon">01</div>
+                  <div>
+                    <strong>Explainable scoring</strong><br />
+                    Every surfaced signal can be broken down for review.
+                  </div>
+                </div>
+                <div class="rr-proof">
+                  <div class="rr-proof-icon">02</div>
+                  <div>
+                    <strong>Parent-first workflow</strong><br />
+                    Built for quick judgment, not vague black-box results.
+                  </div>
+                </div>
+              </div>
+            </div>
+          </section>
+
+          <section class="rr-auth-panel" aria-label="Sign in">
+            <div class="rr-auth-frame">
+              <div class="rr-auth-topline">
+                <div class="rr-auth-badge">Secure sign in</div>
+                <a class="rr-help-link" href="https://roradar.vercel.app/about">
+                  Learn more
+                </a>
+              </div>
+
+              <div class="rr-widget-shell">
+                <div class="rr-widget-header">
+                  <h1>Continue into RoRadar</h1>
+                  <p>
+                    Sign in or create an account to save children, revisit
+                    flagged profiles, and keep your review history in one place.
+                  </p>
+                </div>
+
+                <div class="rr-widget-card">
+                  <div class="rr-widget">
+                    {%- auth0:widget -%}
+                  </div>
+                </div>
+
+                <p class="rr-auth-note">
+                  <strong>Note:</strong> this page only wraps the Auth0 prompt.
+                  Your actual authentication flow, password handling, and
+                  security checks still run through Auth0.
+                </p>
+              </div>
+            </div>
+          </section>
+        </main>
+      </div>
+    </div>
+  </body>
+</html>
