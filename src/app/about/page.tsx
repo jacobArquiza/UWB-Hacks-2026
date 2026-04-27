@@ -51,6 +51,7 @@ const founders = [
     blurb:
     "I'm an aspiring SWE and PM. I find fulfillment in creating things, and expressing that through programming and managing technology projects is how I want to make an impact on the world. RoRadar is only the first step in my journey to make tools and resources that help everyone live a little better.",
     linkedin: "https://www.linkedin.com/in/jacob-arquiza/",
+    avatarUrl: "/team-pfps/jacob.jpeg",
   },
   {
     name: "Arianajoy G. De Castro",
@@ -58,13 +59,15 @@ const founders = [
     blurb:
     "I'm an aspiring PM who's ultimate goal is to make the world a little less scary for the next generation. RoRadar is one of my first projects intended to spark more conversation about how children interact online.",
     linkedin: "https://www.linkedin.com/in/arianajoy-de-castro-6732112b8/",
+    avatarUrl: "/team-pfps/ariana.jpg",
   },
   {
     name: "Renee W. Chiang",
     role: "Research Lead",
     blurb:
     "I'm an aspiring SWE passionate about creating clean, responsive, and user-friendly web experiences through intuitive design and efficient code. RoRadar gave me the opportunity to collaborate with others and bring that passion to life.",
-      linkedin: "https://www.linkedin.com/in/reneewchiang/",
+    linkedin: "https://www.linkedin.com/in/reneewchiang/",
+    avatarUrl: "/team-pfps/renee.jpg",
   },
 ];
 
@@ -84,18 +87,19 @@ export default function AboutPage() {
                     How RoRadar was Born                    
                   </h2>
                   <p className="mt-6 text-sm leading-8 text-foreground/84 sm:text-[0.98rem]">
-                    {/* Replace this paragraph with the story of how your team saw
-                    the problem, what personal or observed moment made it feel
-                    urgent, and why RoRadar became the product you chose to
-                    build. */}
+                    RoRadar was born at the University of Washington Bothell&rsquo;s 2026 Hackathon, winning <strong>first place</strong> in the Human Experience Track. We competed
+                    against over four hundred over developers to build the best project to address the needs of individuals and small groups in the modern day.
                   </p>
                   <p className="mt-4 text-sm leading-8 text-muted-foreground sm:text-[0.98rem]">
-                    {/* This section is designed to be easy to personalize. You can
-                    talk about the original idea, what surprised you during
-                    research, and what made the product worth finishing. */}
+                    As three college students born in the late 2000s, we grew up with Roblox. Almost all of us have accounts over 10 years old! As we&rsquo;ve gotten older, we 
+                    see all the time in media how Roblox has become a platform that isn&rsquo;t always safe for kids who were just like us. With so many stories popping up about
+                    grooming and child exploitation on Roblox, we decided to make a tool that makes predatory activity more visible to concerned parents.
                   </p>
                 </div>
 
+                <p className="text-[0.72rem] font-medium tracking-[0.34em] text-primary uppercase">
+                    Meet the Team
+                  </p>
                 <div className="grid gap-4 md:grid-cols-3">
                   {founders.map((founder) => (
                     <a
@@ -105,9 +109,12 @@ export default function AboutPage() {
                       rel="noreferrer"
                       className="group rounded-[1.7rem] border border-primary/14 bg-primary/[0.06] px-5 py-6 text-center transition-all duration-300 ease-out hover:border-primary/34 hover:bg-primary/[0.08] hover:shadow-[0_20px_44px_rgba(40,80,255,0.12)]"
                     >
-                      <div className="mx-auto flex h-24 w-24 items-center justify-center rounded-full border border-dashed border-primary/28 bg-foreground/[0.03] text-[0.68rem] font-semibold tracking-[0.2em] text-primary uppercase transition-colors group-hover:border-primary/46">
-                        Photo
-                      </div>
+                      <span
+                        role="img"
+                        aria-label={founder.name}
+                        className="mx-auto block h-24 w-24 rounded-full border border-primary/24 bg-foreground/[0.03] bg-cover bg-center bg-no-repeat shadow-[0_14px_34px_rgba(0,0,0,0.18)] transition-transform duration-300 ease-out group-hover:scale-[1.03] group-hover:border-primary/44"
+                        style={{ backgroundImage: `url(${founder.avatarUrl})` }}
+                      />
                       <h3 className="mt-5 font-heading text-[1.35rem] font-semibold tracking-[-0.03em] text-foreground">
                         {founder.name}
                       </h3>
