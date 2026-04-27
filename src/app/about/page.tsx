@@ -87,12 +87,12 @@ export default function AboutPage() {
                     How RoRadar was Born                    
                   </h2>
                   <p className="mt-6 text-sm leading-8 text-foreground/84 sm:text-[0.98rem]">
-                    RoRadar was born at the University of Washington Bothell&rsquo;s 2026 Hackathon, winning <strong>first place</strong> in the Human Experience Track. We competed
-                    against over four hundred over developers to build the best project to address the needs of individuals and small groups in the modern day.
+                    RoRadar won <strong>first place</strong> University of Washington Bothell's 2026 Hackathon (Human Experience Track). We competed
+                    against over four hundred other developers to build the best project to address the needs of individuals and small groups in the modern day.
                   </p>
                   <p className="mt-4 text-sm leading-8 text-muted-foreground sm:text-[0.98rem]">
-                    As three college students born in the late 2000s, we grew up with Roblox. Almost all of us have accounts over 10 years old! As we&rsquo;ve gotten older, we 
-                    see all the time in media how Roblox has become a platform that isn&rsquo;t always safe for kids who were just like us. With so many stories popping up about
+                    As three college students born in the late 2000s, we grew up with Roblox. Almost all of us have accounts over 10 years old! As we've gotten older, we 
+                    see all the time in media how Roblox has become a platform that isn't always safe for kids who were just like us. With so many stories popping up about
                     grooming and child exploitation on Roblox, we decided to make a tool that makes predatory activity more visible to concerned parents.
                   </p>
                 </div>
