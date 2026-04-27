@@ -49,21 +49,21 @@ const founders = [
     name: "Jacob M. Arquiza",
     role: "Technical Lead",
     blurb:
-      "I'm an aspiring SWE passionate about creating clean, responsive, and user-friendly web experiences through intuitive design and efficient code. RoRadar gave me the opportunity to collaborate with others and bring that passion to life.",
+    "I'm an aspiring SWE and PM. I find fulfillment in creating things, and expressing that through programming and managing technology projects is how I want to make an impact on the world. RoRadar is only the first step in my journey to make tools and resources that help everyone live a little better.",
     linkedin: "https://www.linkedin.com/in/jacob-arquiza/",
-    },
-    {
-      name: "Arianajoy G. De Castro",
-      role: "Project Lead",
-      blurb:
-      "I'm an aspiring SWE and PM. I find fulfillment in creating things, and expressing that through programming and managing technology projects is how I want to make an impact on the world. RoRadar is only the first step in my journey to make tools and resources that help everyone live a little better.",
-      linkedin: "https://www.linkedin.com/in/arianajoy-de-castro-6732112b8/",
-    },
-    {
-      name: "Renee W. Chiang",
-      role: "Research Lead",
-      blurb:
-       "I'm an aspiring PM who's ultimate goal is to make the world a little less scary for the next generation. RoRadar is one of my first projects intended to spark more conversation about how children interact online.",
+  },
+  {
+    name: "Arianajoy G. De Castro",
+    role: "Project Lead",
+    blurb:
+    "I'm an aspiring PM who's ultimate goal is to make the world a little less scary for the next generation. RoRadar is one of my first projects intended to spark more conversation about how children interact online.",
+    linkedin: "https://www.linkedin.com/in/arianajoy-de-castro-6732112b8/",
+  },
+  {
+    name: "Renee W. Chiang",
+    role: "Research Lead",
+    blurb:
+    "I'm an aspiring SWE passionate about creating clean, responsive, and user-friendly web experiences through intuitive design and efficient code. RoRadar gave me the opportunity to collaborate with others and bring that passion to life.",
       linkedin: "https://www.linkedin.com/in/reneewchiang/",
   },
 ];
