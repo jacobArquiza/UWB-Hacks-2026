@@ -2,6 +2,7 @@ import type { Metadata } from "next";
 import { Manrope, Sora } from "next/font/google";
 
 import { Providers } from "@/app/providers";
+import { PageTransition } from "@/components/page-transition";
 import { SiteFooter } from "@/components/site-footer";
 import { SiteNav } from "@/components/site-nav";
 import { getSessionSafe, isAuth0Configured } from "@/lib/auth0";
@@ -60,7 +61,7 @@ export default async function RootLayout({
               }
             />
             <main className="flex flex-1 flex-col">
-              {children}
+              <PageTransition>{children}</PageTransition>
             </main>
             <SiteFooter />
           </div>

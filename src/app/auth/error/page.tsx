@@ -1,5 +1,4 @@
-import Link from "next/link";
-
+import { TransitionLink as Link } from "@/components/transition-link";
 import { buttonVariants } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
 

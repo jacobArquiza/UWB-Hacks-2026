@@ -196,6 +196,65 @@ html[data-theme="light"] {
   }
 }
 
+@keyframes roradar-page-enter {
+  0% {
+    opacity: 0;
+    transform: translate3d(0, 0.9rem, 0) scale(0.988);
+  }
+
+  100% {
+    opacity: 1;
+    transform: translate3d(0, 0, 0) scale(1);
+  }
+}
+
+@keyframes roradar-page-exit {
+  0% {
+    opacity: 1;
+    transform: translate3d(0, 0, 0) scale(1);
+  }
+
+  100% {
+    opacity: 0;
+    transform: translate3d(0, -0.45rem, 0) scale(0.996);
+  }
+}
+
+@layer components {
+  .page-transition-shell {
+    min-width: 0;
+    isolation: isolate;
+    view-transition-name: roradar-page;
+  }
+
+  ::view-transition-group(roradar-page) {
+    animation-duration: 320ms;
+  }
+
+  ::view-transition-old(roradar-page),
+  ::view-transition-new(roradar-page) {
+    backface-visibility: hidden;
+    transform-origin: center top;
+  }
+
+  ::view-transition-old(roradar-page) {
+    animation: roradar-page-exit 220ms cubic-bezier(0.4, 0, 1, 1) both;
+    will-change: opacity, transform;
+  }
+
+  ::view-transition-new(roradar-page) {
+    animation: roradar-page-enter 320ms cubic-bezier(0.22, 1, 0.36, 1) both;
+    will-change: opacity, transform;
+  }
+
+  html.reduce-motion::view-transition-old(roradar-page),
+  html.reduce-motion::view-transition-new(roradar-page),
+  html[data-motion="reduced"]::view-transition-old(roradar-page),
+  html[data-motion="reduced"]::view-transition-new(roradar-page) {
+    animation: none !important;
+  }
+}
+
 @utility shell {
   @apply mx-auto w-full max-w-[1600px] px-5 sm:px-7 lg:px-10;
 }

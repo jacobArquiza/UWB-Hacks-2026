@@ -1,4 +1,4 @@
-import Link from "next/link";
+import { TransitionLink as Link } from "@/components/transition-link";
 
 export function SiteFooter() {
   const year = new Date().getFullYear();

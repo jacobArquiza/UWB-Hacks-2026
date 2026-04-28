@@ -2,10 +2,13 @@
 
 import { useState, useTransition } from "react";
 import Image from "next/image";
-import Link from "next/link";
-import { usePathname, useRouter } from "next/navigation";
+import { usePathname } from "next/navigation";
 import { ArrowRight, Search } from "lucide-react";
 
+import {
+  TransitionLink as Link,
+  useTransitionRouter,
+} from "@/components/transition-link";
 import { SiteSettingsDialog } from "@/components/site-settings-dialog";
 import { Input } from "@/components/ui/input";
 import { buttonVariants } from "@/components/ui/button";
@@ -16,6 +19,28 @@ type SiteNavProps = {
   isLoggedIn: boolean;
   userLabel: string;
 };
+
+function NavUserLink({
+  userLabel,
+  className,
+}: {
+  userLabel: string;
+  className?: string;
+}) {
+  return (
+    <Link
+      href="/dashboard"
+      title={userLabel}
+      className={cn(
+        buttonVariants({ variant: "ghost", size: "sm" }),
+        "max-w-[11.5rem] overflow-hidden rounded-xl px-3 text-[0.9rem] font-medium text-muted-foreground text-ellipsis whitespace-nowrap hover:bg-foreground/[0.05] hover:text-foreground sm:h-9 sm:px-4",
+        className,
+      )}
+    >
+      {userLabel}
+    </Link>
+  );
+}
 
 function NavPrimaryLinks({ compact = false }: { compact?: boolean }) {
   return (
@@ -55,7 +80,7 @@ function NavSearchForm({
   initialUsername: string;
   mobile?: boolean;
 }) {
-  const router = useRouter();
+  const router = useTransitionRouter();
   const [username, setUsername] = useState(initialUsername);
   const [isPending, startTransition] = useTransition();
 
@@ -124,6 +149,7 @@ export function SiteNav({
   const pathname = usePathname();
   const authDisabled = !authConfigured;
   const isLanding = pathname === "/";
+  const showLandingAccountActions = isLanding && isLoggedIn;
   const showInlineSearch = !isLanding;
   const currentUsername = pathname.startsWith("/user/")
     ? (() => {
@@ -157,6 +183,13 @@ export function SiteNav({
                 />
               </Link>
               <div className="ml-auto flex flex-wrap items-center gap-2 sm:gap-3">
+                {showLandingAccountActions ? (
+                  <NavUserLink
+                    userLabel={userLabel}
+                    className="hidden sm:inline-flex"
+                  />
+                ) : null}
+                {showLandingAccountActions ? <SiteSettingsDialog /> : null}
                 {showInlineSearch ? <SiteSettingsDialog /> : null}
                 {showInlineSearch ? <NavPrimaryLinks compact /> : null}
                 {isLoggedIn ? (
@@ -200,7 +233,7 @@ export function SiteNav({
               </div>
             </div>
 
-            <div className="hidden items-center gap-5 md:flex">
+            <div className="relative hidden items-center gap-5 md:flex">
               <Link
                 href="/"
                 className="flex min-w-0 shrink-0 items-center px-1 transition-opacity hover:opacity-80"
@@ -215,10 +248,17 @@ export function SiteNav({
                 />
               </Link>
 
-              <div className="flex min-w-0 flex-1 items-center justify-center">
+              <div
+                className={cn(
+                  "flex min-w-0 flex-1 items-center justify-center",
+                  isLanding &&
+                    "pointer-events-none absolute inset-y-0 left-1/2 -translate-x-1/2",
+                )}
+              >
                 <div
                   className={cn(
                     "flex items-center justify-center gap-1 transition-[max-width,opacity,transform] duration-300 ease-out",
+                    isLanding && "pointer-events-auto",
                     isLanding
                       ? "max-w-md translate-y-0 opacity-100"
                       : "max-w-0 -translate-y-1 opacity-0 pointer-events-none",
@@ -253,20 +293,22 @@ export function SiteNav({
               </div>
 
               <div className="ml-auto flex shrink-0 items-center gap-2 sm:gap-3">
+                {showLandingAccountActions ? (
+                  <NavUserLink
+                    userLabel={userLabel}
+                    className="hidden md:inline-flex"
+                  />
+                ) : null}
+                {showLandingAccountActions ? <SiteSettingsDialog /> : null}
                 {showInlineSearch ? <SiteSettingsDialog /> : null}
                 {showInlineSearch ? <NavPrimaryLinks compact /> : null}
                 {isLoggedIn ? (
                   <>
                     {showInlineSearch ? (
-                      <Link
-                        href="/dashboard"
-                        className={cn(
-                          buttonVariants({ variant: "ghost", size: "sm" }),
-                          "hidden rounded-xl px-3 text-[0.9rem] font-medium text-muted-foreground hover:bg-foreground/[0.05] hover:text-foreground xl:inline-flex xl:h-9 xl:px-4",
-                        )}
-                      >
-                        {userLabel}
-                      </Link>
+                      <NavUserLink
+                        userLabel={userLabel}
+                        className="hidden xl:inline-flex"
+                      />
                     ) : null}
                     <a
                       href="/auth/logout"

@@ -1,6 +1,6 @@
-import Link from "next/link";
 import { ArrowRight, ShieldAlert, Users, FileText } from "lucide-react";
 
+import { TransitionLink as Link } from "@/components/transition-link";
 import { buttonVariants } from "@/components/ui/button";
 import {
   Card,

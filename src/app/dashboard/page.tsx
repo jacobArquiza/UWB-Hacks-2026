@@ -1,5 +1,4 @@
-import Link from "next/link";
-
+import { TransitionLink as Link } from "@/components/transition-link";
 import { SavedChildrenGrid } from "@/components/dashboard/saved-children-grid";
 import { buttonVariants } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";

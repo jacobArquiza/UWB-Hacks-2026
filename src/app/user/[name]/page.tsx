@@ -1,5 +1,4 @@
-import Link from "next/link";
-
+import { TransitionLink as Link } from "@/components/transition-link";
 import { AssessmentShell } from "@/components/assessment/assessment-shell";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { buildUserAssessment } from "@/lib/assessment";

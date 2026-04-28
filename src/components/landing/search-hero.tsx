@@ -1,13 +1,13 @@
 "use client";
 
 import { useDeferredValue, useState, useTransition } from "react";
-import { useRouter } from "next/navigation";
 import { ArrowRight, Search } from "lucide-react";
 
+import { useTransitionRouter } from "@/components/transition-link";
 import { Input } from "@/components/ui/input";
 
 export function SearchHero() {
-  const router = useRouter();
+  const router = useTransitionRouter();
   const [username, setUsername] = useState("");
   const [isPending, startTransition] = useTransition();
   const deferredUsername = useDeferredValue(username.trim());

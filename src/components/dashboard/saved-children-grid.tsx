@@ -1,10 +1,10 @@
 "use client";
 
-import Link from "next/link";
 import { useState, useSyncExternalStore } from "react";
 import { ArrowRight, Ghost, Trash2 } from "lucide-react";
 import { toast } from "sonner";
 
+import { TransitionLink as Link } from "@/components/transition-link";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
