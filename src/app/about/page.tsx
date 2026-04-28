@@ -87,7 +87,7 @@ export default function AboutPage() {
                     How RoRadar was Born                    
                   </h2>
                   <p className="mt-6 text-sm leading-8 text-foreground/84 sm:text-[0.98rem]">
-                    RoRadar won <strong>first place</strong> University of Washington Bothell's 2026 Hackathon (Human Experience Track). We competed
+                    RoRadar won <strong>first place</strong> at University of Washington Bothell's 2026 Hackathon (Human Experience Track). We competed
                     against over four hundred other developers to build the best project to address the needs of individuals and small groups in the modern day.
                   </p>
                   <p className="mt-4 text-sm leading-8 text-muted-foreground sm:text-[0.98rem]">
